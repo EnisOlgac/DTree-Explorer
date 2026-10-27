@@ -64,6 +64,11 @@ button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-
 .toolbar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
 .stepper { display: flex; align-items: center; gap: 8px; flex: 1 1 320px; min-width: 0; }
 .stepper input[type="range"] { flex: 1; min-width: 80px; accent-color: var(--accent); }
+.stepper button { white-space: nowrap; }
+@media (max-width: 560px) {
+  .stepper { flex-wrap: wrap; }
+  .stepper input[type="range"] { order: -1; flex-basis: 100%; }   /* slider on its own row above the buttons */
+}
 .steplabel { font-size: 14px; min-height: 1.5em; }
 .steplabel b { font-family: var(--mono); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -151,9 +156,9 @@ footer.band a { color: var(--ink); }
     <div class="card">
       <div class="toolbar">
         <div class="stepper">
-          <button id="prev" type="button" aria-label="Previous step">&#9664;</button>
+          <button id="prev" type="button" title="Previous edge (left arrow key)">&#9664; Previous edge</button>
           <input id="step" type="range" min="0" max="0" value="0" aria-label="Step">
-          <button id="next" type="button" aria-label="Next step">&#9654;</button>
+          <button id="next" type="button" title="Next edge (right arrow key)">Next edge &#9654;</button>
           <button id="play" type="button">Play</button>
         </div>
         <div class="chips" role="group" aria-label="Views">
@@ -207,7 +212,7 @@ footer.band a { color: var(--ink); }
 <footer class="band">
   <div class="wrap">
     <div>
-      <p><b>DTree Explorer 1.0.0</b> &middot; computed by <a href="https://pypi.org/project/dtree-encoding/">dtree-encoding</a> (MIT) &middot; <a href="https://github.com/EnisOlgac/DTree-Explorer">source on GitHub</a> &middot; <a href="https://doi.org/10.5772/intechopen.1013408">the paper</a></p>
+      <p><b>DTree Explorer 1.0.1</b> &middot; computed by <a href="https://pypi.org/project/dtree-encoding/">dtree-encoding</a> (MIT) &middot; <a href="https://github.com/EnisOlgac/DTree-Explorer">source on GitHub</a> &middot; <a href="https://doi.org/10.5772/intechopen.1013408">the paper</a></p>
       <p>Your tree never leaves your computer. Opened from a file or a website, the page loads the Python runtime from cdn.jsdelivr.net and the package from pypi.org; started with <code>dtree-explorer</code>, it uses the library installed on your machine.</p>
     </div>
     <div><p>Contact: Enis Olgac, enis@digraphs.info</p><p>Copyright &copy; 2026 by Ihsan Enis Olgac, B&ouml;blingen</p></div>
@@ -1472,7 +1477,7 @@ def encode(text, limit=LIMIT):
 const CONFIG = {
   dtreeVersion: "1.8.0",
   pyodideURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/",
-  explorerVersion: "1.0.0",
+  explorerVersion: "1.0.1",
   gaId: "G-TZ0VBPP43R",                       // Google Analytics 4, only in the copy for digraphs.blog; empty elsewhere
   privacyURL: "https://digraphs.blog/",           // statement on data protection and privacy (blog copy)
 };
@@ -1707,7 +1712,7 @@ function render() {
   }
   const si = C.stepInfo;
   $("#steplabel").innerHTML = d.stepwise
-    ? `Step ${state.step + 1} of ${total}: <b>${esc(si.op)}</b> <span style="color:var(--muted)">(line ${si.line})</span> &middot; ${C.s.q1.length} nodes`
+    ? `Edge ${state.step + 1} of ${total}: <b>${edgeText(si.op)}</b> <span style="color:var(--muted)">(line ${si.line})</span> &middot; ${C.s.q1.length} nodes`
     : `Final tree: ${C.s.q1.length} nodes. Step by step is available up to ${d.limit} insertions.`;
   $("#stats").textContent = `${d.final.q1.length} nodes · renumberings Q1 / Q2: ${d.renumber[0]} / ${d.renumber[1]}`;
   if ($("#v-tree").checked) $("#tree").innerHTML = treeSVG(C);
@@ -1718,6 +1723,14 @@ function render() {
   $("#p-lists").hidden = !$("#v-lists").checked;
   $("#tree-note").textContent = state.collapsed.size ? `${state.collapsed.size} collapsed` : "children in Q1 order";
   $("#query").innerHTML = queryHTML(C);
+}
+
+// "p:c" -> "p → c", "s>c" -> "c after s", "s<c" -> "c before s"
+function edgeText(op) {
+  const at = op.search(/[:<>]/);
+  const a = esc(op.slice(0, at)), b = esc(op.slice(at + 1)), k = op[at];
+  if (k === ":") return `${a} &rarr; ${b}`;
+  return `${b} ${k === ">" ? "after" : "before"} ${a}`;
 }
 
 function setData(data) {
@@ -1790,6 +1803,15 @@ function wire() {
   });
   $("#text").addEventListener("keydown", (ev) => { if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter") runEncode(); });
   $("#step").addEventListener("input", (ev) => { stopPlay(); goStep(+ev.target.value); });
+  document.addEventListener("keydown", (ev) => {      // arrow keys step edge by edge, except while typing
+    if (ev.altKey || ev.ctrlKey || ev.metaKey || ev.target.closest("textarea, input:not([type=range]), select")) return;
+    if (ev.key === "ArrowRight" || ev.key === "ArrowLeft") {
+      if (ev.target.id === "step") return;              // the slider handles its own arrow keys
+      ev.preventDefault();
+      stopPlay();
+      goStep(state.step + (ev.key === "ArrowRight" ? 1 : -1));
+    }
+  });
   $("#prev").addEventListener("click", () => { stopPlay(); goStep(state.step - 1); });
   $("#next").addEventListener("click", () => { stopPlay(); goStep(state.step + 1); });
   $("#play").addEventListener("click", () => {

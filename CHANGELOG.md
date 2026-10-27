@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1
+
+- **Edge by edge:** the step buttons are labeled "Previous edge" and "Next edge", and the left and right arrow keys step backward and forward (except while typing). Suggested by Enis Olgac.
+- The step line names the edge: "Edge 7 of 19: 02 → 07", "v before 6" or "X after 03".
+
 ## 1.0.0
 
 First release of the DTree Explorer, a web page that encodes a directed tree with DTree's two projections Q1 and Q2 and shows it step by step.
