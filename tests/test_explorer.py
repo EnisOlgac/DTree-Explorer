@@ -89,11 +89,12 @@ class TestServer(unittest.TestCase):
 
 class TestPages(unittest.TestCase):
     def test_variants(self):
-        plain, site = build.page(), build.page(build.SITE["ga"], build.SITE["privacy"])
+        plain, site = build.page(), build.page(build.SITE["counter"], build.SITE["privacy"])
         for html in (plain, site):
             self.assertNotRegex(html, r"__[A-Z_]+__")
-        self.assertNotIn(build.SITE["ga"], plain)                         # package copy: no visit counting
-        self.assertIn(build.SITE["ga"], site)
+            self.assertNotIn("googletagmanager", html)                     # no Google Analytics anywhere
+        self.assertNotIn(build.SITE["counter"], plain)                    # package copy: no visit counting
+        self.assertIn(build.SITE["counter"], site)
 
     def test_save(self):
         with tempfile.TemporaryDirectory() as d:

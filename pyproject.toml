@@ -30,7 +30,7 @@ dtree-explorer = "dtree_explorer.__main__:main"
 [project.urls]
 Homepage = "https://github.com/EnisOlgac/DTree-Explorer"
 Library = "https://github.com/EnisOlgac/DTree"
-Online = "https://digraphs.blog/dtree-demo/"
+Online = "https://dtree.digraphs.net/"
 Paper = "https://doi.org/10.5772/intechopen.1013408"
 
 [tool.setuptools]

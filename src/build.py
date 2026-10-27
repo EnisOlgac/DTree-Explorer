@@ -2,7 +2,7 @@
 
 Writes two copies of the same page:
   dtree_explorer/explorer.html   for the package and the GitHub release (no visit counting)
-  site/index.html                for digraphs.blog (Google Analytics after consent)
+  site/index.html                for dtree.digraphs.net (GoatCounter: visits counted, no cookies)
 
 Both embed the examples, the dtree source of the installed dtree-encoding (fallback when
 PyPI cannot be reached), the bridge, and the default example precomputed with the bridge.
@@ -21,7 +21,8 @@ import dtree  # noqa: E402  (the installed dtree-encoding)
 from dtree_explorer import __version__ as EXPLORER_VERSION  # noqa: E402
 from dtree_explorer import bridge  # noqa: E402
 
-SITE = {"ga": "G-TZ0VBPP43R", "privacy": "https://digraphs.blog/"}   # set privacy to the blog's privacy page
+# online copy at dtree.digraphs.net: GoatCounter (no cookies) and the privacy notice next to it
+SITE = {"counter": "https://dtree.goatcounter.com/count", "privacy": "privacy.html"}
 
 DEFAULT = "Paper, Appendix A: base tree (Test.csx)"
 APPENDIX = "examples/Test.csx"
@@ -71,7 +72,7 @@ def examples():
     return {name: text(src) for name, src in EXAMPLES}
 
 
-def page(ga="", privacy=""):
+def page(counter="", privacy=""):
     ex = examples()
     pkg = os.path.dirname(dtree.__file__)
     parts = {
@@ -80,7 +81,7 @@ def page(ga="", privacy=""):
         "__BRIDGE_SRC__": safe(read("dtree_explorer/bridge.py")),
         "__DTREE_VERSION__": dtree.__version__,
         "__EXPLORER_VERSION__": EXPLORER_VERSION,
-        "__GA_ID__": ga,
+        "__COUNTER__": counter,
         "__PRIVACY_URL__": privacy,
         "__EXAMPLES__": safe(json.dumps(ex, indent=1)),
         "__DEFAULT__": safe(json.dumps({"example": DEFAULT, "data": json.loads(bridge.encode(ex[DEFAULT]))})),
@@ -103,7 +104,7 @@ def write(path, html):
 
 def main():
     write("dtree_explorer/explorer.html", page())
-    write("site/index.html", page(SITE["ga"], SITE["privacy"]))
+    write("site/index.html", page(SITE["counter"], SITE["privacy"]))
     print(f"DTree Explorer {EXPLORER_VERSION} with dtree-encoding {dtree.__version__}")
 
 

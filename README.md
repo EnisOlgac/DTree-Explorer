@@ -6,7 +6,7 @@ Every tree is computed by the published library, [dtree-encoding](https://pypi.o
 
 ## Three ways to use it
 
-**Online:** [digraphs.blog/dtree-demo](https://digraphs.blog/dtree-demo/), nothing to install.
+**Online:** [dtree.digraphs.net](https://dtree.digraphs.net/), nothing to install.
 
 **As a Python program**, offline, with the library installed on your machine:
 
@@ -33,11 +33,11 @@ The examples include the trees of the paper: the introductory example, Figure 1,
 
 ## Privacy
 
-Your tree stays on your computer. The page counts visits only in the copy on digraphs.blog, with Google Analytics and only after you agree; the package and the release file count nothing.
+Your tree stays on your computer. Only the online copy at dtree.digraphs.net counts visits, with [GoatCounter](https://www.goatcounter.com/): no cookies, no personal data. The package and the release file count nothing.
 
 ## Building
 
-Working in this repository needs the library installed: `pip install dtree-encoding`. `src/template.html` is the page, `dtree_explorer/bridge.py` the Python part it runs, `src/build.py` assembles `dtree_explorer/explorer.html` (package and release) and `site/index.html` (digraphs.blog) with the installed dtree-encoding. Tests: `python -m unittest discover -s tests`.
+Working in this repository needs the library installed: `pip install dtree-encoding`. `src/template.html` is the page, `dtree_explorer/bridge.py` the Python part it runs, `src/build.py` assembles `dtree_explorer/explorer.html` (package and release) and `site/index.html` (dtree.digraphs.net) with the installed dtree-encoding. Tests: `python -m unittest discover -s tests`.
 
 ## Background
 

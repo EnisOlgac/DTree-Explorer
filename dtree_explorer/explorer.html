@@ -105,9 +105,6 @@ footer.band { background: var(--peach); margin-top: 8px; }
 footer.band .wrap { padding-block: 16px 22px; font-size: 13px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; }
 footer.band p { margin: 2px 0; }
 footer.band a { color: var(--ink); }
-#consent { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--paper); border-top: 2px solid var(--peach-deep); box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.08); padding-bottom: env(safe-area-inset-bottom, 0px); }
-#consent .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px; padding-block: 12px; font-size: 14px; }
-#consent .row button.agree { background: #2e9b4f; border-color: #2e9b4f; color: #fff; font-weight: 600; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -212,19 +209,13 @@ footer.band a { color: var(--ink); }
 <footer class="band">
   <div class="wrap">
     <div>
-      <p><b>DTree Explorer 1.0.1</b> &middot; computed by <a href="https://pypi.org/project/dtree-encoding/">dtree-encoding</a> (MIT) &middot; <a href="https://github.com/EnisOlgac/DTree-Explorer">source on GitHub</a> &middot; <a href="https://doi.org/10.5772/intechopen.1013408">the paper</a></p>
+      <p><b>DTree Explorer 1.0.2</b> &middot; computed by <a href="https://pypi.org/project/dtree-encoding/">dtree-encoding</a> (MIT) &middot; <a href="https://github.com/EnisOlgac/DTree-Explorer">source on GitHub</a> &middot; <a href="https://doi.org/10.5772/intechopen.1013408">the paper</a></p>
       <p>Your tree never leaves your computer. Opened from a file or a website, the page loads the Python runtime from cdn.jsdelivr.net and the package from pypi.org; started with <code>dtree-explorer</code>, it uses the library installed on your machine.</p>
     </div>
-    <div><p>Contact: Enis Olgac, enis@digraphs.info</p><p>Copyright &copy; 2026 by Ihsan Enis Olgac, B&ouml;blingen</p></div>
+    <div><p>Contact: Enis Olgac, enis@digraphs.info</p><p>Copyright &copy; 2026 by Ihsan Enis Olgac, B&ouml;blingen</p><p id="legal" hidden><a href="imprint.html">Imprint</a> &middot; <a id="privacy-link" href="#">Privacy</a></p></div>
   </div>
 </footer>
 
-<div id="consent" hidden>
-  <div class="wrap">
-    <span>This page counts visits with Google Analytics, using cookies, if you agree. Please read the statement on <a id="privacy-link" href="https://digraphs.blog/">data protection and privacy</a>.</span>
-    <span class="row"><button type="button" id="c-no">No thanks</button><button type="button" class="agree" id="c-yes">I agree</button></span>
-  </div>
-</div>
 
 <script type="text/plain" id="src-init">"""DTree: directed tree library with dual projections Q1 and Q2."""
 
@@ -1477,9 +1468,9 @@ def encode(text, limit=LIMIT):
 const CONFIG = {
   dtreeVersion: "1.8.0",
   pyodideURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/",
-  explorerVersion: "1.0.1",
-  gaId: "",                       // Google Analytics 4, only in the copy for digraphs.blog; empty elsewhere
-  privacyURL: "",           // statement on data protection and privacy (blog copy)
+  explorerVersion: "1.0.2",
+  counter: "",                  // GoatCounter endpoint, only in the online copy (dtree.digraphs.net); empty elsewhere
+  privacyURL: "",           // privacy notice of the online copy; empty elsewhere
 };
 const EXAMPLES = {
  "Quick start": "A: B; D\nB: C\n",
@@ -1955,30 +1946,28 @@ async function boot() {
   }
 }
 
-// ---- visit counting, only after consent ------------------------------------------------
-function track(name, params) { if (typeof window.gtag === "function") window.gtag("event", name, params || {}); }
-function startAnalytics() {
-  if (!CONFIG.gaId || window.gtag || location.protocol === "file:") return;   // local copies are not counted
-  window.dataLayer = window.dataLayer || [];
-  window.gtag = function () { window.dataLayer.push(arguments); };
-  window.gtag("js", new Date());
-  window.gtag("config", CONFIG.gaId, { anonymize_ip: true });
+// ---- visit counting (online copy only): GoatCounter, no cookies, no personal data --------
+function track(name, params) {
+  if (!window.goatcounter || typeof window.goatcounter.count !== "function") return;
+  const extra = params ? " " + Object.values(params).join(" ") : "";
+  window.goatcounter.count({ path: name + extra, title: name, event: true });
+}
+function startCounter() {
+  if (!CONFIG.counter || location.protocol === "file:" || ["127.0.0.1", "localhost"].includes(location.hostname)) return;
   const s = document.createElement("script");
-  s.async = true; s.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(CONFIG.gaId);
+  s.async = true;
+  s.dataset.goatcounter = CONFIG.counter;
+  s.src = "https://gc.zgo.at/count.js";
   document.head.appendChild(s);
 }
-function consent() {
-  if (!CONFIG.gaId) return;                // no visit counting in this copy: no banner
+function privacyLink() {
+  if (!CONFIG.privacyURL) return;                 // the imprint lies next to the privacy notice
   $("#privacy-link").href = CONFIG.privacyURL;
-  const c = store.get("dtree-explorer-consent");
-  if (c === "yes") { startAnalytics(); return; }
-  if (c === "no") return;
-  $("#consent").hidden = false;
-  $("#c-yes").addEventListener("click", () => { store.set("dtree-explorer-consent", "yes"); $("#consent").hidden = true; startAnalytics(); });
-  $("#c-no").addEventListener("click", () => { store.set("dtree-explorer-consent", "no"); $("#consent").hidden = true; });
+  $("#legal").hidden = false;
 }
 
-consent();
+startCounter();
+privacyLink();
 boot();
 </script>
 </body>
