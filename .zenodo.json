@@ -1,0 +1,35 @@
+{
+  "title": "DTree Explorer: Watching the Incremental Encoding of Directed Trees",
+  "upload_type": "software",
+  "description": "<p>DTree Explorer shows the incremental encoding of directed trees by DTree at work. DTree places every node in two linear projections Q1 and Q2; node u reaches node v if and only if u precedes v in both, and inserting a node adds two positions without moving any other node. The Explorer builds a tree edge by edge and draws it in three views: the tree, the plane in which each node sits at its rank in Q1 and Q2, and the projections with the positions the library stores. Clicking nodes shows what reaches a node and what it reaches, and answers whether one node reaches another with both comparisons. The examples include those of the chapter &quot;Topology and Structure of Directed Trees: An Incremental Encoding&quot;, among them the generalized insertion before or after a sibling (operators &quot;s > c&quot; and &quot;s < c&quot;). Every tree is computed by the published library dtree-encoding: locally with the installed package (pip install dtree-explorer), or in the browser with Pyodide.</p><p>Repository: https://github.com/EnisOlgac/DTree-Explorer. Install: <code>pip install dtree-explorer</code>, then <code>dtree-explorer</code>.</p>",
+  "creators": [
+    {
+      "name": "Olgac, Enis",
+      "orcid": "0009-0009-7560-6107"
+    }
+  ],
+  "keywords": [
+    "directed tree",
+    "tree topology",
+    "reachability",
+    "dual projection",
+    "visualization",
+    "education",
+    "Python"
+  ],
+  "license": "MIT",
+  "related_identifiers": [
+    {
+      "identifier": "10.5772/intechopen.1013408",
+      "relation": "isSupplementTo",
+      "scheme": "doi",
+      "resource_type": "publication-section"
+    },
+    {
+      "identifier": "10.5281/zenodo.23395710",
+      "relation": "requires",
+      "scheme": "doi",
+      "resource_type": "software"
+    }
+  ]
+}
