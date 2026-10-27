@@ -7,6 +7,7 @@ authors:
     given-names: Enis
     email: enis@digraphs.info
     orcid: "https://orcid.org/0009-0009-7560-6107"
+doi: "10.5281/zenodo.23701538"
 repository-code: "https://github.com/EnisOlgac/DTree-Explorer"
 url: "https://dtree.digraphs.net/"
 license: MIT

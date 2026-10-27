@@ -1,5 +1,7 @@
 # DTree Explorer
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23701538.svg)](https://doi.org/10.5281/zenodo.23701538)
+
 Encode a directed tree with [DTree](https://github.com/EnisOlgac/DTree)'s two projections Q1 and Q2 and watch it happen, edge by edge. The Explorer draws the tree, places every node in the plane at its rank in Q1 and Q2, lists both projections with the positions the library stores, and answers reachability questions by clicking: *u* reaches *v* exactly when *u* comes before *v* in both lists.
 
 Every tree is computed by the published library, [dtree-encoding](https://pypi.org/project/dtree-encoding/); the Explorer only shows what it computes.
@@ -42,6 +44,10 @@ Working in this repository needs the library installed: `pip install dtree-encod
 ## Background
 
 E. Olgac, "Topology and Structure of Directed Trees: An Incremental Encoding," IntechOpen, 2025. doi: [10.5772/intechopen.1013408](https://doi.org/10.5772/intechopen.1013408).
+
+## Citation
+
+E. Olgac, *DTree Explorer: Watching the Incremental Encoding of Directed Trees*, software, 2026. doi: [10.5281/zenodo.23701538](https://doi.org/10.5281/zenodo.23701538) (all versions). See `CITATION.cff`.
 
 ## License
 

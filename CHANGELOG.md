@@ -2,6 +2,8 @@
 
 ## 1.0.2
 
+Archived on Zenodo: doi:10.5281/zenodo.23701538 (all versions).
+
 - Online at **https://dtree.digraphs.net/**; README and package links point there. The online copy counts visits with GoatCounter (no cookies, no personal data, no consent banner) instead of Google Analytics, and links to a privacy notice and an imprint (`site/privacy.html`, `site/imprint.html`).
 - Citation metadata (`CITATION.cff`) and Zenodo metadata (`.zenodo.json`): the archive is linked to the chapter (is supplement to doi:10.5772/intechopen.1013408) and to DTree (requires doi:10.5281/zenodo.23395710).
 
