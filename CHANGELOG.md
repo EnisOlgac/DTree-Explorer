@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0
+
+- **Animated insertion:** each edge step glides from the old picture to the new one in every view. The new node starts at its parent and moves into place; the other nodes move to their new ranks, while their stored positions stay unchanged. Speed Slow, Normal, Fast or No animation (remembered per browser); Play waits for each step. Steps of more than one edge, and browsers set to reduced motion, switch without animation.
+- **Q1 and Q2 sorted by Q1** (the new default of view 3), suggested by Enis Olgac: one column per node in Q1 order, with its Q1 and Q2 rank and stored positions. Q1 rises by one from column to column; Q2 rises from a node to the next exactly when the next is its child, and drops where a new block begins (marked in orange). Below the table, the Q2 ranks are joined in Q1 order, which is the plane's points joined in Q1 order. "Each in its own order" shows the previous layout.
+
 ## 1.0.2
 
 Archived on Zenodo: doi:10.5281/zenodo.23701538 (all versions).
