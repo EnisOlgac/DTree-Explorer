@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1
+
+- Computed by **triordinal-dtree** 2.1.0: the browser version installs 2.1.0 from PyPI, and the built-in fallback copy holds its sources. No change to the Explorer itself; the Q1 and Q2 positions it shows now come from lists in which every node with children also has a closing cell (not shown).
+
 ## 1.2.0
 
 - Computed by **triordinal-dtree** 2.0.0, the new home of DTree (repository EnisOlgac/Triordinal), instead of dtree-encoding. The library's API is unchanged; the Explorer imports `triordinal.dtree`, the browser version installs `triordinal-dtree` (with `triordinal-dlist`) from PyPI, and its built-in fallback copy holds both.
