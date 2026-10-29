@@ -4,7 +4,7 @@ Writes two copies of the same page:
   dtree_explorer/explorer.html   for the package and the GitHub release (no visit counting)
   site/index.html                for dtree.digraphs.net (GoatCounter: visits counted, no cookies)
 
-Both embed the examples, the dtree source of the installed dtree-encoding (fallback when
+Both embed the examples, the DTree and DList sources of the installed triordinal-dtree (fallback when
 PyPI cannot be reached), the bridge, and the default example precomputed with the bridge.
 Run from the repository root:  python src/build.py
 """
@@ -16,7 +16,8 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-import dtree  # noqa: E402  (the installed dtree-encoding)
+import triordinal.dlist as dlist  # noqa: E402  (installed with triordinal-dtree)
+import triordinal.dtree as dtree  # noqa: E402  (the installed triordinal-dtree)
 
 from dtree_explorer import __version__ as EXPLORER_VERSION  # noqa: E402
 from dtree_explorer import bridge  # noqa: E402
@@ -76,8 +77,9 @@ def page(counter="", privacy=""):
     ex = examples()
     pkg = os.path.dirname(dtree.__file__)
     parts = {
+        "__DLIST_SRC__": safe(read(dlist.__file__)),
         "__DTREE_INIT__": safe(read(os.path.join(pkg, "__init__.py"))),
-        "__DTREE_SRC__": safe(read(os.path.join(pkg, "dtree.py"))),
+        "__DTREE_SRC__": safe(read(os.path.join(pkg, "core.py"))),
         "__BRIDGE_SRC__": safe(read("dtree_explorer/bridge.py")),
         "__DTREE_VERSION__": dtree.__version__,
         "__EXPLORER_VERSION__": EXPLORER_VERSION,
@@ -105,7 +107,7 @@ def write(path, html):
 def main():
     write("dtree_explorer/explorer.html", page())
     write("site/index.html", page(SITE["counter"], SITE["privacy"]))
-    print(f"DTree Explorer {EXPLORER_VERSION} with dtree-encoding {dtree.__version__}")
+    print(f"DTree Explorer {EXPLORER_VERSION} with triordinal-dtree {dtree.__version__}")
 
 
 if __name__ == "__main__":

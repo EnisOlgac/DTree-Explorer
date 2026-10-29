@@ -1,4 +1,4 @@
-"""Start the DTree Explorer: a local web page that computes with the installed dtree-encoding.
+"""Start the DTree Explorer: a local web page that computes with the installed triordinal-dtree.
 
     dtree-explorer                 open the Explorer in the browser
     dtree-explorer --port 8765     use a fixed port (default: a free one)
@@ -17,7 +17,7 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
 
-import dtree
+import triordinal.dtree as dtree
 
 from . import __version__, bridge
 

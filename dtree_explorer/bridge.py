@@ -1,6 +1,6 @@
-"""Bridge between the DTree Explorer page and the dtree package.
+"""Bridge between the DTree Explorer page and DTree (package triordinal-dtree).
 
-The page runs this module in the browser (Pyodide) with the published dtree-encoding
+The page runs this module in the browser (Pyodide) with the published triordinal-dtree
 package; the same code runs under CPython for the tests and to precompute the example
 that is shown while the Python runtime loads. Everything the page displays about the
 encoding (the order of Q1 and Q2, the positions, the parents) comes from here.
@@ -8,8 +8,8 @@ encoding (the order of Q1 and Q2, the positions, the parents) comes from here.
 
 import json
 
-import dtree
-from dtree import DTree
+import triordinal.dtree as dtree
+from triordinal.dtree import DTree
 
 LIMIT = 300  # insertions recorded step by step; larger trees show the final state only
 

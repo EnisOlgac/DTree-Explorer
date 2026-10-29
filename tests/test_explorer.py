@@ -13,7 +13,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "src"))
 
-from dtree import DTree  # noqa: E402
+from triordinal.dtree import DTree  # noqa: E402
 
 import build  # noqa: E402
 from dtree_explorer import __main__ as app  # noqa: E402

@@ -224,7 +224,7 @@ footer.band a { color: var(--ink); }
 <footer class="band">
   <div class="wrap">
     <div>
-      <p><b>DTree Explorer __EXPLORER_VERSION__</b> &middot; computed by <a href="https://pypi.org/project/dtree-encoding/">dtree-encoding</a> (MIT) &middot; <a href="https://github.com/EnisOlgac/DTree-Explorer">source on GitHub</a> &middot; <a href="https://doi.org/10.5772/intechopen.1013408">the paper</a></p>
+      <p><b>DTree Explorer __EXPLORER_VERSION__</b> &middot; computed by <a href="https://pypi.org/project/triordinal-dtree/">triordinal-dtree</a> (MIT) &middot; <a href="https://github.com/EnisOlgac/DTree-Explorer">source on GitHub</a> &middot; <a href="https://doi.org/10.5772/intechopen.1013408">the paper</a></p>
       <p>Your tree never leaves your computer. Opened from a file or a website, the page loads the Python runtime from cdn.jsdelivr.net and the package from pypi.org; started with <code>dtree-explorer</code>, it uses the library installed on your machine.</p>
     </div>
     <div><p>Contact: Enis Olgac, enis@digraphs.info</p><p>Copyright &copy; 2026 by Ihsan Enis Olgac, B&ouml;blingen</p><p id="legal" hidden><a href="imprint.html">Imprint</a> &middot; <a id="privacy-link" href="#">Privacy</a></p></div>
@@ -232,6 +232,7 @@ footer.band a { color: var(--ink); }
 </footer>
 
 
+<script type="text/plain" id="src-dlist">__DLIST_SRC__</script>
 <script type="text/plain" id="src-init">__DTREE_INIT__</script>
 <script type="text/plain" id="src-dtree">__DTREE_SRC__</script>
 <script type="text/plain" id="src-bridge">__BRIDGE_SRC__</script>
@@ -738,7 +739,7 @@ async function startLocal() {
     if (!r.ok) return null;
     const info = await r.json();
     return {
-      label: `dtree-encoding ${info.dtree} (installed) on Python ${info.python}, local`,
+      label: `triordinal-dtree ${info.dtree} (installed) on Python ${info.python}, local`,
       local: true,
       encode: async (text) => {
         const res = await fetch("api/encode", { method: "POST", headers: { "Content-Type": "text/plain; charset=utf-8" }, body: text });
@@ -757,21 +758,23 @@ async function startPyodide() {
   const py = await loadPyodide({ indexURL: CONFIG.pyodideURL });
   let source = "from PyPI";
   try {
-    setStatus("", "Installing dtree-encoding " + CONFIG.dtreeVersion + " from PyPI&hellip;");
+    setStatus("", "Installing triordinal-dtree " + CONFIG.dtreeVersion + " from PyPI&hellip;");
     await py.loadPackage("micropip");
-    await py.runPythonAsync(`import micropip\nawait micropip.install("dtree-encoding==${CONFIG.dtreeVersion}")`);
+    await py.runPythonAsync(`import micropip\nawait micropip.install("triordinal-dtree==${CONFIG.dtreeVersion}")`);
   } catch (e) {
     source = "built-in copy";          // PyPI unreachable: the identical source shipped with this page
-    py.FS.mkdirTree("/home/pyodide/dtree");
-    py.FS.writeFile("/home/pyodide/dtree/__init__.py", $("#src-init").textContent);
-    py.FS.writeFile("/home/pyodide/dtree/dtree.py", $("#src-dtree").textContent);
+    py.FS.mkdirTree("/home/pyodide/triordinal/dlist");     // namespace package triordinal: no __init__.py
+    py.FS.mkdirTree("/home/pyodide/triordinal/dtree");
+    py.FS.writeFile("/home/pyodide/triordinal/dlist/__init__.py", $("#src-dlist").textContent);
+    py.FS.writeFile("/home/pyodide/triordinal/dtree/__init__.py", $("#src-init").textContent);
+    py.FS.writeFile("/home/pyodide/triordinal/dtree/core.py", $("#src-dtree").textContent);
   }
   py.FS.writeFile("/home/pyodide/explorer_bridge.py", $("#src-bridge").textContent);
   py.runPython('import sys\nif "/home/pyodide" not in sys.path: sys.path.insert(0, "/home/pyodide")');
   const encode = py.runPython("import explorer_bridge\nexplorer_bridge.encode");
-  const version = py.runPython("import dtree\ndtree.__version__");
+  const version = py.runPython("import triordinal.dtree\ntriordinal.dtree.__version__");
   return {
-    label: `dtree-encoding ${version} (${source}) on Pyodide ${py.version}`,
+    label: `triordinal-dtree ${version} (${source}) on Pyodide ${py.version}`,
     encode: async (text) => JSON.parse(encode(text)),
   };
 }

@@ -11,8 +11,8 @@ doi: "10.5281/zenodo.23701538"
 repository-code: "https://github.com/EnisOlgac/DTree-Explorer"
 url: "https://dtree.digraphs.net/"
 license: MIT
-version: "1.1.0"
-date-released: "2026-10-28"
+version: "1.2.0"
+date-released: "2026-10-29"
 keywords:
   - directed tree
   - tree topology
@@ -33,7 +33,7 @@ abstract: >-
   comparisons. The examples include those of the chapter "Topology and
   Structure of Directed Trees: An Incremental Encoding", among them the
   generalized insertion before or after a sibling (operators "s > c" and
-  "s < c"). Every tree is computed by the published library dtree-encoding:
+  "s < c"). Every tree is computed by the published library triordinal-dtree (formerly dtree-encoding):
   locally with the installed package (pip install dtree-explorer), or in the
   browser with Pyodide.
 references:
