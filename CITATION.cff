@@ -11,8 +11,8 @@ doi: "10.5281/zenodo.23701538"
 repository-code: "https://github.com/EnisOlgac/DTree-Explorer"
 url: "https://dtree.digraphs.net/"
 license: MIT
-version: "1.2.1"
-date-released: "2026-10-29"
+version: "1.3.0"
+date-released: "2026-10-30"
 keywords:
   - directed tree
   - tree topology
@@ -30,7 +30,9 @@ abstract: >-
   each node sits at its rank in Q1 and Q2, and the projections with the
   positions the library stores. Clicking nodes shows what reaches a node and
   what it reaches, and answers whether one node reaches another with both
-  comparisons. The examples include those of the chapter "Topology and
+  comparisons. Since version 1.3.0 the Explorer also shows EulerTree, which
+  keeps Q1 alone with a closing cell for every node with children (the Euler
+  tour), and lets the user choose rational or integer positions. The examples include those of the chapter "Topology and
   Structure of Directed Trees: An Incremental Encoding", among them the
   generalized insertion before or after a sibling (operators "s > c" and
   "s < c"). Every tree is computed by the published library triordinal-dtree (formerly dtree-encoding):

@@ -14,6 +14,7 @@ import json
 import platform
 import sys
 import webbrowser
+from urllib.parse import parse_qs
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
 
@@ -57,13 +58,19 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self._local_host():
             return self._send(403, "text/plain", b"forbidden")
-        if self.path.split("?", 1)[0] != "/api/encode":
+        path, _, query = self.path.partition("?")
+        if path != "/api/encode":
             return self._send(404, "text/plain", b"not found")
+        q = parse_qs(query)
+        kind = q.get("kind", ["dtree"])[0]
+        positions = q.get("positions", ["rational"])[0]
+        if kind not in bridge.KINDS or positions not in bridge.POSITIONS:
+            return self._send(400, "text/plain", b"kind must be dtree or euler, positions rational or integer")
         n = int(self.headers.get("Content-Length") or 0)
         if n > MAX_INPUT:
             return self._send(413, "text/plain", b"description too large")
         text = self.rfile.read(n).decode("utf-8", "replace")
-        self._send(200, "application/json", bridge.encode(text).encode())
+        self._send(200, "application/json", bridge.encode(text, kind=kind, positions=positions).encode())
 
     def log_message(self, *args):  # quiet
         pass
@@ -79,7 +86,7 @@ def main(argv=None):
     ap.add_argument("--port", type=int, default=0, help="port on 127.0.0.1 (default: a free one)")
     ap.add_argument("--no-browser", action="store_true", help="do not open the browser")
     ap.add_argument("--save", metavar="FILE", help="write the page as one HTML file and exit")
-    ap.add_argument("--version", action="version", version=f"DTree Explorer {__version__}, dtree-encoding {dtree.__version__}")
+    ap.add_argument("--version", action="version", version=f"DTree Explorer {__version__}, triordinal-dtree {dtree.__version__}")
     args = ap.parse_args(argv)
     if args.save:
         with open(args.save, "wb") as fh:
@@ -88,7 +95,7 @@ def main(argv=None):
         return 0
     httpd = serve(args.port)
     url = f"http://127.0.0.1:{httpd.server_address[1]}/"
-    print(f"DTree Explorer {__version__} with dtree-encoding {dtree.__version__} at {url}")
+    print(f"DTree Explorer {__version__} with triordinal-dtree {dtree.__version__} at {url}")
     print("Press Ctrl+C to stop.")
     if not args.no_browser:
         webbrowser.open(url)

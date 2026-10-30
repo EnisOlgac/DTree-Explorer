@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DTree Explorer</title>
-<meta name="description" content="Encode a directed tree with DTree's two projections Q1 and Q2, step by step, in your browser.">
+<meta name="description" content="Encode a directed tree with DTree's two lists Q1 and Q2, or with EulerTree's one list, step by step, in your browser.">
 <style>
 /* Layout: a peach band as on digraphs.blog, then input on the left and the pictures on the right;
    one column on phones. One light look on purpose, matching the site. */
@@ -101,8 +101,13 @@ button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-
 .cell.sel1 small, .cell.sel2 small { color: #fff; }
 .cell.sel2 { background: var(--ink); border-color: var(--ink); color: #fff; }
 .cell.hid { opacity: 0.4; }
+.cell.close { border-style: dashed; }
+.cell.close b { font-weight: 400; color: var(--muted); }
+.cell.sel1 b, .cell.sel2 b { color: #fff; }
+.opts { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
 .qgrid .qrow { gap: 4px; margin: 2px 0 6px; }
 .qgrid .cell { width: 48px; min-width: 0; box-sizing: border-box; padding: 3px 2px; }
+.qgrid.wide .cell { width: 72px; }
 .qgrid .cell.blk { box-shadow: -3px 0 0 var(--accent); }
 .qgrid svg { display: block; }
 .stats { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -136,6 +141,12 @@ footer.band a { color: var(--ink); }
       <input id="file" type="file" accept=".csx,.txt,text/plain">
       <label class="field" for="text">Edges, one line each</label>
       <textarea id="text" spellcheck="false"></textarea>
+      <div class="opts">
+        <div><label class="field" for="kind">Encoding</label>
+          <select id="kind"><option value="dtree">DTree (Q1, Q2)</option><option value="euler">EulerTree (Q1)</option></select></div>
+        <div><label class="field" for="positions">Positions</label>
+          <select id="positions"><option value="rational">rational</option><option value="integer">integer</option></select></div>
+      </div>
       <div class="row" style="margin-top:10px">
         <button id="encode" class="primary" type="button" disabled>Encode</button>
         <span class="stats" id="stats"></span>
@@ -148,8 +159,8 @@ footer.band a { color: var(--ink); }
     </div>
     <div class="card">
       <h2>How to read it</h2>
-      <p style="margin:0 0 8px">Every node gets a position in two lists. <b>Q1</b> lists the tree top-down with siblings in their order, <b>Q2</b> with siblings reversed. A node <i>u</i> reaches <i>v</i> exactly when <i>u</i> comes before <i>v</i> in both lists.</p>
-      <p style="margin:0 0 8px">A new node needs two list insertions; the other positions stay as they are. Step through the build with the slider and watch it happen, edge by edge.</p>
+      <div id="howto"></div>
+      <p style="margin:0 0 8px" id="howto-pos"></p>
       <p style="margin:0;font-size:13px;color:var(--muted)">The method is described in E. Olgac, <a href="https://doi.org/10.5772/intechopen.1013408">&ldquo;Topology and Structure of Directed Trees: An Incremental Encoding&rdquo;</a>.</p>
     </div>
   </aside>
@@ -172,7 +183,7 @@ footer.band a { color: var(--ink); }
         <div class="chips" role="group" aria-label="Views">
           <label class="chip"><input type="checkbox" id="v-tree" checked> Tree</label>
           <label class="chip"><input type="checkbox" id="v-plane" checked> Plane</label>
-          <label class="chip"><input type="checkbox" id="v-lists" checked> Q1 / Q2</label>
+          <label class="chip"><input type="checkbox" id="v-lists" checked> <span id="v-lists-label">Q1 / Q2</span></label>
         </div>
         <div class="seg" role="group" aria-label="Clicking a node">
           <button type="button" id="m-pick" aria-pressed="true">Pick nodes</button>
@@ -201,7 +212,7 @@ footer.band a { color: var(--ink); }
     <div class="card" id="p-plane">
       <div class="panel-head">
         <h2>Plane</h2>
-        <span class="note">each node at (its rank in Q1, its rank in Q2)</span>
+        <span class="note" id="plane-note"></span>
         <div class="row"><button type="button" data-save="plane" data-fmt="svg">Save SVG</button><button type="button" data-save="plane" data-fmt="png">Save PNG</button></div>
       </div>
       <div class="scroll" id="plane"></div>
@@ -209,7 +220,7 @@ footer.band a { color: var(--ink); }
 
     <div class="card" id="p-lists">
       <div class="panel-head">
-        <h2>Q1 and Q2</h2>
+        <h2 id="lists-title">Q1 and Q2</h2>
         <span class="note" id="lists-note"></span>
         <div class="seg" role="group" aria-label="Order of the lists">
           <button type="button" id="l-sorted" aria-pressed="true">Sorted by Q1</button>
@@ -224,7 +235,7 @@ footer.band a { color: var(--ink); }
 <footer class="band">
   <div class="wrap">
     <div>
-      <p><b>DTree Explorer 1.2.1</b> &middot; computed by <a href="https://pypi.org/project/triordinal-dtree/">triordinal-dtree</a> (MIT) &middot; <a href="https://github.com/EnisOlgac/DTree-Explorer">source on GitHub</a> &middot; <a href="https://doi.org/10.5772/intechopen.1013408">the paper</a></p>
+      <p><b>DTree Explorer 1.3.0</b> &middot; computed by <a href="https://pypi.org/project/triordinal-dtree/">triordinal-dtree</a> (MIT) &middot; <a href="https://github.com/EnisOlgac/DTree-Explorer">source on GitHub</a> &middot; <a href="https://doi.org/10.5772/intechopen.1013408">the paper</a></p>
       <p>Your tree never leaves your computer. Opened from a file or a website, the page loads the Python runtime from cdn.jsdelivr.net and the package from pypi.org; started with <code>dtree-explorer</code>, it uses the library installed on your machine.</p>
     </div>
     <div><p>Contact: Enis Olgac, enis@digraphs.info</p><p>Copyright &copy; 2026 by Ihsan Enis Olgac, B&ouml;blingen</p><p id="legal" hidden><a href="imprint.html">Imprint</a> &middot; <a id="privacy-link" href="#">Privacy</a></p></div>
@@ -240,6 +251,12 @@ strictly between them, so normally no other element moves. Rational positions we
 Enis Olgac's idea. Only when a denominator would exceed 64 bits is the smallest
 surrounding region with enough room renumbered with simple fractions k/2**32; larger
 regions must be sparser before they are accepted (as in Bender et al., ESA 2002).
+
+Integer positions are offered as well, ``DList(name, positions="integer")``: a new element
+gets the midpoint of its neighbors' labels in [0, 2**62], as in classical order maintenance,
+and when no integer is left between them the smallest surrounding region with enough room is
+relabeled evenly, with the same density rule. In the Triordinal benchmarks, integer positions
+are faster to compare and rational positions are renumbered far less often.
 
 A list may also hold unnamed cells: they have a position like any other cell but no
 name, so iteration, ``next``/``prev`` and all lookups by name pass over them. DTree uses
@@ -258,6 +275,9 @@ _Q = 1 << 32  # denominator used when a crowded region is renumbered
 _LIMIT = 64  # renumber when a denominator would exceed this many bits
 _SLACK = 16  # after renumbering, neighbors are at least this many 1/_Q apart
 _GROWTH = 2  # each doubling of the region raises the required spacing by this factor
+_U = 1 << 62  # integer positions: SOURCE has label 0, SINK label _U
+
+POSITIONS = ("rational", "integer")
 
 
 class _Cell:
@@ -282,15 +302,22 @@ class DList:
     region renumbered with simple fractions k/_Q.
     """
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, positions: str = "rational") -> None:
+        if positions not in POSITIONS:
+            raise ValueError(f"positions must be one of {POSITIONS}, not {positions!r}")
         self.name = name
+        self.positions = positions
+        self._integer = positions == "integer"
         self._cells: Dict[str, _Cell] = {}
         self.first = self._new(SOURCE)
         self.last = self._new(SINK)
         self.first.next = self.last
         self.last.prev = self.first
-        self.first.num, self.first.den = -1, 0  # -infinity
-        self.last.num, self.last.den = 1, 0  # +infinity
+        if self._integer:
+            self.first.num, self.last.num = 0, _U  # integer labels (den 1) in [0, 2**62]
+        else:
+            self.first.num, self.first.den = -1, 0  # -infinity
+            self.last.num, self.last.den = 1, 0  # +infinity
         # Statistics: how often positions were renumbered and how many moved.
         self.renumber_count = 0
         self.renumber_moved = 0
@@ -315,6 +342,13 @@ class DList:
         cell.prev, cell.next = prev, nxt
         prev.next = cell
         nxt.prev = cell
+        if self._integer:
+            g = nxt.num - prev.num
+            if g >= 2:
+                cell.num, cell.den = prev.num + (g >> 1), 1  # the midpoint
+            else:
+                self._rebalance_integer(cell)
+            return
         if prev is self.first and nxt is self.last:
             cell.num, cell.den = 0, 1  # first node of an empty list
             return
@@ -365,6 +399,33 @@ class DList:
         c = lo
         for kv in ks:
             c.num, c.den = kv, q
+            c = c.next
+        self.renumber_count += 1
+        self.renumber_moved += m
+
+    def _rebalance_integer(self, cell: _Cell) -> None:
+        """Relabel the smallest region around ``cell`` that has room, evenly (integer positions)."""
+        lo = hi = cell
+        m, k, need = 1, 1, _SLACK
+        while True:
+            for _ in range(k):
+                if lo.prev is not self.first:
+                    lo = lo.prev
+                    m += 1
+                if hi.next is not self.last:
+                    hi = hi.next
+                    m += 1
+            left, right = lo.prev, hi.next
+            room = right.num - left.num - 1  # integers strictly between the two
+            if room >= m * need or (left is self.first and right is self.last):
+                break
+            k *= 2
+            need *= _GROWTH
+        if room < m:
+            raise OverflowError(f"{self.name}: no integer positions left")
+        c, base = lo, left.num
+        for j in range(m):
+            c.num, c.den = base + ((j + 1) * (room + 1)) // (m + 1), 1
             c = c.next
         self.renumber_count += 1
         self.renumber_moved += m
@@ -438,9 +499,11 @@ class DList:
         cell = self._cells.get(name)
         if cell is None:
             return None
-        if cell.den == 0:
-            return float("inf") if cell.num > 0 else float("-inf")
-        return Fraction(cell.num, cell.den)
+        if cell is self.first:
+            return float("-inf")
+        if cell is self.last:
+            return float("inf")
+        return cell.num if self._integer else Fraction(cell.num, cell.den)
 
     label = index
 
@@ -559,15 +622,15 @@ class DList:
     def __repr__(self) -> str:
         return f"{self.name}: [{', '.join(self)}]"
 
-__all__ = ["DList", "SOURCE", "SINK"]
-__version__ = "2.1.0"
+__all__ = ["DList", "SOURCE", "SINK", "POSITIONS"]
+__version__ = "2.2.0"
 </script>
 <script type="text/plain" id="src-init">"""DTree: incremental encoding of directed trees by two linear orders Q1 and Q2 (part of Triordinal)."""
 
 from triordinal.dtree.core import SINK, SOURCE, DList, DNode, DTree, Projection, UMax, UMin, VMax, VMin
 
 __all__ = ["DTree", "DNode", "DList", "Projection", "VMin", "VMax", "UMin", "UMax", "SOURCE", "SINK"]
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 </script>
 <script type="text/plain" id="src-dtree">"""DTree: a single-rooted directed tree encoded by two linear projections.
 
@@ -673,7 +736,24 @@ def _lt(x: _Cell, y: _Cell) -> bool:
 
 
 def _reaches(u: DNode, v: DNode) -> bool:
+    """u reaches v in two lists: u precedes v in Q1 and in Q2."""
     return _lt(u.c1, v.c1) and _lt(u.c2, v.c2)
+
+
+def _reaches1(u: DNode, v: DNode) -> bool:
+    """u reaches v in one list (EulerTree): v lies strictly inside u's block in Q1."""
+    return _lt(u.c1, v.c1) and _lt(v.c1, u.e1 or u.c1)
+
+
+def _lt2(x: DNode, y: DNode) -> bool:
+    """x precedes y in the second coordinate: Q2."""
+    return _lt(x.c2, y.c2)
+
+
+def _lt2_euler(x: DNode, y: DNode) -> bool:
+    """x precedes y in the second coordinate of one list: y's block ends before x's block in Q1
+    (the block end takes the place of the Q2 position, in reverse order)."""
+    return _lt(y.e1 or y.c1, x.e1 or x.c1)
 
 
 class Projection:
@@ -772,17 +852,29 @@ class DTree:
     ``contains`` and ``same_subtree`` are membership tests and never raise.
     """
 
-    def __init__(self, tree_id: str = "P1", strict: bool = False) -> None:
+    _single = False  # EulerTree: Q1 only
+    _reach = staticmethod(_reaches)
+    _lt2 = staticmethod(_lt2)
+
+    def __init__(self, tree_id: str = "P1", strict: bool = False, positions: str = "rational") -> None:
         self.tree_id = tree_id
         self._strict = bool(strict)
         self._nodes: Dict[str, DNode] = {}
         self._root: Optional[DNode] = None
-        self._q1 = DList(f"{tree_id}.Q1")
-        self._q2 = DList(f"{tree_id}.Q2")
+        self._q1 = DList(f"{tree_id}.Q1", positions)
         self._v1 = Projection(self._q1)
-        self._v2 = Projection(self._q2)
+        if self._single:
+            self._q2 = self._v2 = None
+        else:
+            self._q2 = DList(f"{tree_id}.Q2", positions)
+            self._v2 = Projection(self._q2)
         self.edge_log: List[str] = []
         self._reshapes = 0  # counts deletions and moves; insertions keep the order of existing nodes
+
+    @property
+    def positions(self) -> str:
+        """The kind of position in the lists: "rational" (the default) or "integer"."""
+        return self._q1.positions
 
     @property
     def strict(self) -> bool:
@@ -791,7 +883,8 @@ class DTree:
 
     # -- construction ------------------------------------------------------
     @classmethod
-    def from_file(cls, path: str, tree_id: Optional[str] = None, strict: bool = False) -> "DTree":
+    def from_file(cls, path: str, tree_id: Optional[str] = None, strict: bool = False,
+                  positions: str = "rational") -> "DTree":
         """Read the format used by the .csx examples.
 
         ``parent: child1; child2`` adds children as last children of ``parent``;
@@ -802,7 +895,7 @@ class DTree:
         """
         import os
 
-        tree = cls(tree_id or os.path.splitext(os.path.basename(path))[0], strict)
+        tree = cls(tree_id or os.path.splitext(os.path.basename(path))[0], strict, positions)
         with open(path, encoding="utf-8-sig") as fh:
             for line in fh:
                 line = line.strip()
@@ -874,7 +967,7 @@ class DTree:
         s = self._sibling(sibling, child)
         p = s.up
         i = p.kids.index(s)
-        n = self._attach(child, p, i + 1, s.e1 or s.c1, s.c2.prev)
+        n = self._attach(child, p, i + 1, s.e1 or s.c1, None if self._single else s.c2.prev)
         self.edge_log.append(f"({s.name} > {child})")
         return n
 
@@ -901,8 +994,10 @@ class DTree:
     def _make_root(self, name: str) -> DNode:
         n = DNode(name, self)
         n.c1 = self._q1._insert_cell_after(name, self._q1.first)
-        n.c2 = self._q2._insert_cell_after(name, self._q2.first)
-        n.c1.node = n.c2.node = n
+        n.c1.node = n
+        if not self._single:
+            n.c2 = self._q2._insert_cell_after(name, self._q2.first)
+            n.c2.node = n
         self._root = n
         self._nodes[name] = n
         return n
@@ -912,8 +1007,10 @@ class DTree:
         after the given cells. All checks are done; the name is registered last."""
         n = DNode(name, self)
         n.c1 = self._q1._insert_cell_after(name, q1_after)
-        n.c2 = self._q2._insert_cell_after(name, q2_after)
-        n.c1.node = n.c2.node = n
+        n.c1.node = n
+        if not self._single:
+            n.c2 = self._q2._insert_cell_after(name, q2_after)
+            n.c2.node = n
         n.up = p
         if p.kids is None:
             p.kids = [n]
@@ -929,20 +1026,22 @@ class DTree:
         """Give p its closing cells if it has none: directly after p, as its block is p alone."""
         if p.e1 is None:
             p.e1 = self._q1._insert_cell_after(None, p.c1)
-            p.e2 = self._q2._insert_cell_after(None, p.c2)
-            p.e1.node = p.e2.node = p
+            p.e1.node = p
+            if not self._single:
+                p.e2 = self._q2._insert_cell_after(None, p.c2)
+                p.e2.node = p
 
     def _close(self, p: DNode) -> None:
         """Remove p's closing cells once p has no children left."""
         if p.e1 is not None:
             self._q1._remove_cell(p.e1)
-            self._q2._remove_cell(p.e2)
+            if not self._single:
+                self._q2._remove_cell(p.e2)
             p.e1 = p.e2 = None
 
-    @staticmethod
-    def _in(p: DNode, x: DNode) -> bool:
+    def _in(self, p: DNode, x: DNode) -> bool:
         """x is p or lies in p's subtree."""
-        return x is p or _reaches(p, x)
+        return x is p or self._reach(p, x)
 
     def next_in_q1(self, node) -> Optional[str]:
         """The node after ``node`` in Q1, as a name, or None after the last node. Q1 is the
@@ -987,7 +1086,8 @@ class DTree:
         for k in kids:
             k.up = p
         self._q1._remove_cell(n.c1)
-        self._q2._remove_cell(n.c2)
+        if not self._single:
+            self._q2._remove_cell(n.c2)
         self._close(n)
         if not p.kids:
             p.kids = None
@@ -1005,7 +1105,8 @@ class DTree:
         if n is self._root:
             raise ValueError("the root cannot be deleted")
         cells = self._q1._cut_cells(n.c1, self._end1(n), forget=True)
-        self._q2._cut_cells(n.c2, self._end2(n), forget=True)
+        if not self._single:
+            self._q2._cut_cells(n.c2, self._end2(n), forget=True)
         removed = [c.node for c in cells if c.name is not None]
         p = n.up
         p.kids.remove(n)
@@ -1031,7 +1132,7 @@ class DTree:
         if self._in(u, p):
             raise ValueError("new_parent lies inside the subtree being moved")
         block1 = self._q1._cut_cells(u.c1, self._end1(u), forget=False)
-        block2 = self._q2._cut_cells(u.c2, self._end2(u), forget=False)
+        block2 = None if self._single else self._q2._cut_cells(u.c2, self._end2(u), forget=False)
         old = u.up
         old.kids.remove(u)
         if not old.kids:
@@ -1040,7 +1141,8 @@ class DTree:
         # Same placement rule as insert: Q2 directly after the parent,
         # Q1 directly before the parent's closing cell.
         self._open(p)
-        self._q2._paste_cells_after(block2, p.c2)
+        if not self._single:
+            self._q2._paste_cells_after(block2, p.c2)
         self._q1._paste_cells_after(block1, p.e1.prev)
         u.up = p
         if p.kids is None:
@@ -1117,6 +1219,8 @@ class DTree:
     @property
     def Q2(self) -> Projection:
         """Read-only view of the Q2 projection, as Q1."""
+        if self._single:
+            raise AttributeError("an EulerTree keeps Q1 only; it has no Q2")
         return self._v2
 
     @property
@@ -1126,6 +1230,8 @@ class DTree:
 
     @property
     def q2(self) -> List[str]:
+        if self._single:
+            raise AttributeError("an EulerTree keeps Q1 only; it has no Q2")
         return self._q2.to_list()
 
     @property
@@ -1148,7 +1254,8 @@ class DTree:
         return self.contains(node)
 
     def __repr__(self) -> str:
-        return f"DTree({self.tree_id!r}, size={self.size})\n  {self._q1!r}\n  {self._q2!r}"
+        lists = f"\n  {self._q1!r}" + ("" if self._single else f"\n  {self._q2!r}")
+        return f"{type(self).__name__}({self.tree_id!r}, size={self.size}){lists}"
 
     # -- queries ----------------------------------------------------------
     def contains(self, node) -> bool:
@@ -1191,7 +1298,10 @@ class DTree:
         a, b = u.c1, v.c1
         if not a.num * b.den < b.num * a.den:
             return False
-        a, b = u.c2, v.c2
+        if self._single:                                   # one list: v's cell before u's block ends
+            a, b = b, u.e1 or a
+        else:
+            a, b = u.c2, v.c2
         return a.num * b.den < b.num * a.den
 
     def can_not_reach(self, u, v) -> bool:
@@ -1247,7 +1357,7 @@ class DTree:
         Raises if u != v and u cannot reach v.
         """
         a, b = self._node(u), self._node(v)
-        if a is not b and not _reaches(a, b):
+        if a is not b and not self._reach(a, b):
             raise ValueError(f"{a.name!r} cannot reach {b.name!r}")
         out, w = [b.name], b
         while w is not a:
@@ -1316,7 +1426,8 @@ class _VNode:
         return c is None or (_lt(v.c1, c.c1) if self._lowest else _lt(c.c1, v.c1))
 
     def _better2(self, v: DNode, c: Optional[DNode]) -> bool:
-        return c is None or (_lt(v.c2, c.c2) if self._lowest else _lt(c.c2, v.c2))
+        lt2 = self._t._lt2
+        return c is None or (lt2(v, c) if self._lowest else lt2(c, v))
 
     def _rescan(self) -> None:
         self._c1 = self._c2 = None
@@ -1422,11 +1533,11 @@ class _VNode:
 
     def _below(self, u: DNode) -> bool:
         """u lies strictly left of the constructed node in both Q1 and Q2."""
-        return _lt(u.c1, self._c1.c1) and _lt(u.c2, self._c2.c2)
+        return _lt(u.c1, self._c1.c1) and self._t._lt2(u, self._c2)
 
     def _above(self, v: DNode) -> bool:
         """v lies strictly right of the constructed node in both Q1 and Q2."""
-        return _lt(self._c1.c1, v.c1) and _lt(self._c2.c2, v.c2)
+        return _lt(self._c1.c1, v.c1) and self._t._lt2(self._c2, v)
 
 
 class VMin(_VNode):
@@ -1472,7 +1583,7 @@ class VMax(_VNode):
                 hi = mid
             else:
                 lo = mid + 1
-        return lo < len(m) and _reaches(n, m[lo])
+        return lo < len(m) and self._t._reach(n, m[lo])
 
 
 class UMax(_VNode):
@@ -1520,7 +1631,7 @@ class UMin(_VNode):
 
     def _cover(self, v: DNode) -> Optional[DNode]:
         i = self._last_top_before(v)
-        if i > 0 and _reaches(self._tops[i - 1], v):
+        if i > 0 and self._t._reach(self._tops[i - 1], v):
             return self._tops[i - 1]
         return None
 
@@ -1529,7 +1640,7 @@ class UMin(_VNode):
             return                       # an ancestor of node is already in the set
         i = self._last_top_before(node)
         m = self._tops
-        while i < len(m) and _reaches(node, m[i]):
+        while i < len(m) and self._t._reach(node, m[i]):
             del m[i]                     # node is above them: they are no longer topmost
         m.insert(i, node)
 
@@ -1540,7 +1651,7 @@ class UMin(_VNode):
     def _rebuilt(self) -> None:
         self._tops = []
         for v in self._members:          # Q1 order: ancestors come first
-            if not (self._tops and _reaches(self._tops[-1], v)):
+            if not (self._tops and self._t._reach(self._tops[-1], v)):
                 self._tops.append(v)
 
     def may_be_reached_by_some(self, v) -> bool:
@@ -1567,20 +1678,69 @@ class UMin(_VNode):
         c = self._cover(n)
         return c.name if c is not None else None
 </script>
-<script type="text/plain" id="src-bridge">"""Bridge between the DTree Explorer page and DTree (package triordinal-dtree).
+<script type="text/plain" id="src-euler">"""EulerTree: a directed tree encoded by one list, its Euler tour (part of Triordinal).
+
+``from triordinal.dtree.euler import EulerTree``
+
+An EulerTree keeps DTree's Q1 alone, with the closing cells that DTree 2.1.0 introduced: every
+node with children has a closing cell directly after the last cell of its subtree, so the
+subtree of u is the block from u to its closing cell (u alone for a leaf). Node u reaches node v
+exactly when v's cell lies strictly inside u's block: two position comparisons, as in DTree.
+This is the classical parenthesis (Euler-tour) encoding of a tree (Dietz 1982), maintained under
+insertions on DTree's list; leaves need no closing cell.
+
+The API is DTree's: names or handles, insert / insert_after / insert_before, delete,
+delete_subtree, cut_n_paste, strict mode, and the constructed nodes VMin, VMax, UMin, UMax. In
+one list a constructed node uses the end of each member's block in place of its Q2 position;
+insertions keep the order of block ends, so constructed nodes stay valid as in DTree. ``Q2`` and
+``q2`` do not exist.
+
+For trees, the Euler tour holds the same information as DTree's two lists (Q2 is the post-order
+reversed) and is faster to maintain; see docs/prior-art.md. Positions are rational by default;
+``positions="integer"`` gives integer positions, faster to compare and renumbered more often.
+"""
+
+from __future__ import annotations
+
+from triordinal.dtree.core import DNode, DTree, UMax, UMin, VMax, VMin, _lt2_euler, _reaches1
+
+__all__ = ["EulerTree", "DNode", "VMin", "VMax", "UMin", "UMax"]
+
+
+class EulerTree(DTree):
+    """Single-rooted directed tree encoded by one list (Q1 with closing cells).
+
+    ``EulerTree(tree_id="E1", strict=False, positions="rational")``; everything else as DTree.
+    """
+
+    _single = True
+    _reach = staticmethod(_reaches1)
+    _lt2 = staticmethod(_lt2_euler)
+
+    def __init__(self, tree_id: str = "E1", strict: bool = False, positions: str = "rational") -> None:
+        super().__init__(tree_id, strict, positions)
+</script>
+<script type="text/plain" id="src-bridge">"""Bridge between the DTree Explorer page and the library (package triordinal-dtree).
 
 The page runs this module in the browser (Pyodide) with the published triordinal-dtree
 package; the same code runs under CPython for the tests and to precompute the example
 that is shown while the Python runtime loads. Everything the page displays about the
-encoding (the order of Q1 and Q2, the positions, the parents) comes from here.
+encoding (the order of the lists, the positions, the parents) comes from here.
+
+Two encodings: "dtree" (DTree, two lists Q1 and Q2) and "euler" (EulerTree, one list: Q1
+with its closing cells, the Euler tour). Two kinds of position: "rational" and "integer".
 """
 
 import json
+from fractions import Fraction
 
 import triordinal.dtree as dtree
 from triordinal.dtree import DTree
+from triordinal.dtree.euler import EulerTree
 
 LIMIT = 300  # insertions recorded step by step; larger trees show the final state only
+KINDS = {"dtree": DTree, "euler": EulerTree}
+POSITIONS = ("rational", "integer")
 
 
 def _split(line):
@@ -1590,19 +1750,47 @@ def _split(line):
     return line[at], line[:at].strip(), [c.strip() for c in line[at + 1:].split(";") if c.strip()]
 
 
-def _state(t):
-    q1, q2 = t.q1, t.q2
-    pos = {v: [str(t.Q1.index(v)), str(t.Q2.index(v))] for v in q1}
-    return {"q1": q1, "q2": q2, "pos": pos}
+def _position(t, cell):
+    """A cell's position as the library stores it: an integer, or a fraction."""
+    return str(cell.num) if t.positions == "integer" else str(Fraction(cell.num, cell.den))
 
 
-def encode(text, limit=LIMIT):
+def _state(t, kind):
+    q1 = t.q1
+    if kind == "dtree":
+        pos = {v: [str(t.Q1.index(v)), str(t.Q2.index(v))] for v in q1}
+        return {"q1": q1, "q2": t.q2, "pos": pos}
+    # EulerTree: the whole list, with the closing cells; each node's block runs from its own cell
+    # to its closing cell (to its own cell for a leaf). Read from the right, the block ends give
+    # Q2: sorting the nodes by their block end, last first, is DTree's second list.
+    cells, opens, ends = [], {}, {}
+    c = t.get_node(t.root).c1
+    while c.name != "]":                                  # up to SINK
+        if c.name is None:                                # a closing cell: ")x" closes x's block
+            cells.append([")" + c.node.name, _position(t, c)])
+            ends[c.node.name] = len(cells) - 1
+        else:
+            cells.append([c.name, _position(t, c)])
+            opens[c.name] = len(cells) - 1
+        c = c.next
+    end = {v: ends.get(v, opens[v]) for v in q1}
+    q2 = sorted(q1, key=lambda v: -end[v])
+    pos = {v: [cells[opens[v]][1], cells[end[v]][1]] for v in q1}
+    return {"q1": q1, "q2": q2, "pos": pos, "cells": cells, "open": opens, "end": end}
+
+
+def encode(text, limit=LIMIT, kind="dtree", positions="rational"):
     """Build a tree from the description and return the steps as JSON.
 
     Each step is one inserted node: the operation, its line, the new node and its parent,
-    and (up to ``limit`` insertions) the full state after it: Q1, Q2 and the positions.
+    and (up to ``limit`` insertions) the full state after it: the lists and the positions.
+    ``kind`` is "dtree" (two lists) or "euler" (one list), ``positions`` "rational" or "integer".
     """
-    t = DTree("E")
+    if kind not in KINDS:
+        raise ValueError(f"kind must be one of {sorted(KINDS)}, not {kind!r}")
+    if positions not in POSITIONS:
+        raise ValueError(f"positions must be one of {POSITIONS}, not {positions!r}")
+    t = KINDS[kind]("E", positions=positions)
     steps, errors, parents = [], [], {}
     recording = True
     for no, raw in enumerate(text.splitlines(), 1):
@@ -1628,30 +1816,34 @@ def encode(text, limit=LIMIT):
                 else:
                     t.insert_before(anchor, child)
                     shown = f"{anchor}<{child}"
-            except (KeyError, ValueError) as e:
+            except (KeyError, ValueError, TypeError) as e:
                 msg = e.args[0] if e.args else str(e)
                 errors.append({"line": no, "text": line, "msg": f"{child}: {msg}"})
                 continue
             parents[child] = t.get_parent(child)
             step = {"line": no, "op": shown, "new": child}
             if recording and len(steps) < limit:
-                step.update(_state(t))
+                step.update(_state(t, kind))
             elif recording:
                 recording = False
                 for s in steps:
-                    for k in ("q1", "q2", "pos"):
+                    for k in ("q1", "q2", "pos", "cells", "open", "end"):
                         s.pop(k, None)
             steps.append(step)
-    final = _state(t) if t.root is not None else {"q1": [], "q2": [], "pos": {}}
+    empty = {"q1": [], "q2": [], "pos": {}, "cells": [], "open": {}, "end": {}}
+    final = _state(t, kind) if t.root is not None else empty
+    lists = [t.Q1] if kind == "euler" else [t.Q1, t.Q2]
     return json.dumps({
         "version": dtree.__version__,
+        "kind": kind,
+        "positions": positions,
         "root": t.root,
         "parents": parents,
         "steps": steps,
         "final": final,
         "stepwise": recording,
         "limit": limit,
-        "renumber": [t.Q1.renumber_count, t.Q2.renumber_count],
+        "renumber": [q.renumber_count for q in lists],
         "errors": errors,
     })
 </script>
@@ -1659,9 +1851,9 @@ def encode(text, limit=LIMIT):
 "use strict";
 // ---- configuration --------------------------------------------------------------------
 const CONFIG = {
-  dtreeVersion: "2.1.0",
+  dtreeVersion: "2.2.0",
   pyodideURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/",
-  explorerVersion: "1.2.1",
+  explorerVersion: "1.3.0",
   counter: "https://dtree.goatcounter.com/count",                  // GoatCounter endpoint, only in the online copy (dtree.digraphs.net); empty elsewhere
   privacyURL: "privacy.html",           // privacy notice of the online copy; empty elsewhere
 };
@@ -1681,7 +1873,7 @@ const EXAMPLES = {
  "Siblings with > and <": "# Sibling insertion: \">\" inserts after a sibling, \"<\" before it\n01: 02; 05\n02: 03\n02 > 04\n05 < 06\n03 < 03a\n",
  "Chain of 40": "n0: n1\nn1: n2\nn2: n3\nn3: n4\nn4: n5\nn5: n6\nn6: n7\nn7: n8\nn8: n9\nn9: n10\nn10: n11\nn11: n12\nn12: n13\nn13: n14\nn14: n15\nn15: n16\nn16: n17\nn17: n18\nn18: n19\nn19: n20\nn20: n21\nn21: n22\nn22: n23\nn23: n24\nn24: n25\nn25: n26\nn26: n27\nn27: n28\nn28: n29\nn29: n30\nn30: n31\nn31: n32\nn32: n33\nn33: n34\nn34: n35\nn35: n36\nn36: n37\nn37: n38\nn38: n39\nn39: n40\n"
 };
-const DEFAULT = {"example": "Paper, Appendix A: base tree (Test.csx)", "data": {"version": "2.1.0", "root": "01", "parents": {"02": "01", "03": "01", "04": "01", "05": "02", "07": "02", "08": "02", "11": "03", "06": "04", "16": "04", "15": "05", "23": "05", "10": "06", "12": "06", "09": "07", "14": "07", "25": "07", "13": "08", "24": "09", "22": "10"}, "steps": [{"line": 1, "op": "01:02", "new": "02", "q1": ["01", "02"], "q2": ["01", "02"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"]}}, {"line": 2, "op": "01:03", "new": "03", "q1": ["01", "02", "03"], "q2": ["01", "03", "02"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "03": ["2/3", "1/3"]}}, {"line": 3, "op": "01:04", "new": "04", "q1": ["01", "02", "03", "04"], "q2": ["01", "04", "03", "02"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "03": ["2/3", "1/3"], "04": ["3/4", "1/4"]}}, {"line": 4, "op": "02:05", "new": "05", "q1": ["01", "02", "05", "03", "04"], "q2": ["01", "04", "03", "02", "05"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "03": ["2/3", "1/3"], "04": ["3/4", "1/4"]}}, {"line": 5, "op": "02:07", "new": "07", "q1": ["01", "02", "05", "07", "03", "04"], "q2": ["01", "04", "03", "02", "07", "05"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "07": ["7/12", "4/7"], "03": ["2/3", "1/3"], "04": ["3/4", "1/4"]}}, {"line": 6, "op": "02:08", "new": "08", "q1": ["01", "02", "05", "07", "08", "03", "04"], "q2": ["01", "04", "03", "02", "08", "07", "05"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "07": ["7/12", "4/7"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "04": ["3/4", "1/4"]}}, {"line": 7, "op": "03:11", "new": "11", "q1": ["01", "02", "05", "07", "08", "03", "11", "04"], "q2": ["01", "04", "03", "11", "02", "08", "07", "05"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "07": ["7/12", "4/7"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"]}}, {"line": 8, "op": "04:06", "new": "06", "q1": ["01", "02", "05", "07", "08", "03", "11", "04", "06"], "q2": ["01", "04", "06", "03", "11", "02", "08", "07", "05"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "07": ["7/12", "4/7"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"]}}, {"line": 9, "op": "04:16", "new": "16", "q1": ["01", "02", "05", "07", "08", "03", "11", "04", "06", "16"], "q2": ["01", "04", "16", "06", "03", "11", "02", "08", "07", "05"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "07": ["7/12", "4/7"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "16": ["11/14", "4/15"]}}, {"line": 10, "op": "05:15", "new": "15", "q1": ["01", "02", "05", "15", "07", "08", "03", "11", "04", "06", "16"], "q2": ["01", "04", "16", "06", "03", "11", "02", "08", "07", "05", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "07": ["7/12", "4/7"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "16": ["11/14", "4/15"]}}, {"line": 11, "op": "05:23", "new": "23", "q1": ["01", "02", "05", "15", "23", "07", "08", "03", "11", "04", "06", "16"], "q2": ["01", "04", "16", "06", "03", "11", "02", "08", "07", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "16": ["11/14", "4/15"]}}, {"line": 12, "op": "06:10", "new": "10", "q1": ["01", "02", "05", "15", "23", "07", "08", "03", "11", "04", "06", "10", "16"], "q2": ["01", "04", "16", "06", "10", "03", "11", "02", "08", "07", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "10": ["25/32", "8/29"], "16": ["11/14", "4/15"]}}, {"line": 13, "op": "06:12", "new": "12", "q1": ["01", "02", "05", "15", "23", "07", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "10": ["25/32", "8/29"], "12": ["43/55", "11/40"], "16": ["11/14", "4/15"]}}, {"line": 14, "op": "07:09", "new": "09", "q1": ["01", "02", "05", "15", "23", "07", "09", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "09", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "09": ["24/41", "11/19"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "10": ["25/32", "8/29"], "12": ["43/55", "11/40"], "16": ["11/14", "4/15"]}}, {"line": 15, "op": "07:14", "new": "14", "q1": ["01", "02", "05", "15", "23", "07", "09", "14", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "14", "09", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "09": ["24/41", "11/19"], "14": ["41/70", "15/26"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "10": ["25/32", "8/29"], "12": ["43/55", "11/40"], "16": ["11/14", "4/15"]}}, {"line": 16, "op": "07:25", "new": "25", "q1": ["01", "02", "05", "15", "23", "07", "09", "14", "25", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "25", "14", "09", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "09": ["24/41", "11/19"], "14": ["41/70", "15/26"], "25": ["58/99", "19/33"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "10": ["25/32", "8/29"], "12": ["43/55", "11/40"], "16": ["11/14", "4/15"]}}, {"line": 17, "op": "08:13", "new": "13", "q1": ["01", "02", "05", "15", "23", "07", "09", "14", "25", "08", "13", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "13", "07", "25", "14", "09", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "09": ["24/41", "11/19"], "14": ["41/70", "15/26"], "25": ["58/99", "19/33"], "08": ["10/17", "5/9"], "13": ["23/39", "14/25"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "10": ["25/32", "8/29"], "12": ["43/55", "11/40"], "16": ["11/14", "4/15"]}}, {"line": 18, "op": "09:24", "new": "24", "q1": ["01", "02", "05", "15", "23", "07", "09", "24", "14", "25", "08", "13", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "13", "07", "25", "14", "09", "24", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "09": ["24/41", "11/19"], "24": ["89/152", "29/50"], "14": ["41/70", "15/26"], "25": ["58/99", "19/33"], "08": ["10/17", "5/9"], "13": ["23/39", "14/25"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "10": ["25/32", "8/29"], "12": ["43/55", "11/40"], "16": ["11/14", "4/15"]}}, {"line": 19, "op": "10:22", "new": "22", "q1": ["01", "02", "05", "15", "23", "07", "09", "24", "14", "25", "08", "13", "03", "11", "04", "06", "10", "22", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "22", "03", "11", "02", "08", "13", "07", "25", "14", "09", "24", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "09": ["24/41", "11/19"], "24": ["89/152", "29/50"], "14": ["41/70", "15/26"], "25": ["58/99", "19/33"], "08": ["10/17", "5/9"], "13": ["23/39", "14/25"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "10": ["25/32", "8/29"], "22": ["93/119", "21/76"], "12": ["43/55", "11/40"], "16": ["11/14", "4/15"]}}], "final": {"q1": ["01", "02", "05", "15", "23", "07", "09", "24", "14", "25", "08", "13", "03", "11", "04", "06", "10", "22", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "22", "03", "11", "02", "08", "13", "07", "25", "14", "09", "24", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "09": ["24/41", "11/19"], "24": ["89/152", "29/50"], "14": ["41/70", "15/26"], "25": ["58/99", "19/33"], "08": ["10/17", "5/9"], "13": ["23/39", "14/25"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "10": ["25/32", "8/29"], "22": ["93/119", "21/76"], "12": ["43/55", "11/40"], "16": ["11/14", "4/15"]}}, "stepwise": true, "limit": 300, "renumber": [0, 0], "errors": []}};
+const DEFAULT = {"example": "Paper, Appendix A: base tree (Test.csx)", "data": {"dtree rational": {"version": "2.2.0", "kind": "dtree", "positions": "rational", "root": "01", "parents": {"02": "01", "03": "01", "04": "01", "05": "02", "07": "02", "08": "02", "11": "03", "06": "04", "16": "04", "15": "05", "23": "05", "10": "06", "12": "06", "09": "07", "14": "07", "25": "07", "13": "08", "24": "09", "22": "10"}, "steps": [{"line": 1, "op": "01:02", "new": "02", "q1": ["01", "02"], "q2": ["01", "02"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"]}}, {"line": 2, "op": "01:03", "new": "03", "q1": ["01", "02", "03"], "q2": ["01", "03", "02"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "03": ["2/3", "1/3"]}}, {"line": 3, "op": "01:04", "new": "04", "q1": ["01", "02", "03", "04"], "q2": ["01", "04", "03", "02"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "03": ["2/3", "1/3"], "04": ["3/4", "1/4"]}}, {"line": 4, "op": "02:05", "new": "05", "q1": ["01", "02", "05", "03", "04"], "q2": ["01", "04", "03", "02", "05"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "03": ["2/3", "1/3"], "04": ["3/4", "1/4"]}}, {"line": 5, "op": "02:07", "new": "07", "q1": ["01", "02", "05", "07", "03", "04"], "q2": ["01", "04", "03", "02", "07", "05"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "07": ["7/12", "4/7"], "03": ["2/3", "1/3"], "04": ["3/4", "1/4"]}}, {"line": 6, "op": "02:08", "new": "08", "q1": ["01", "02", "05", "07", "08", "03", "04"], "q2": ["01", "04", "03", "02", "08", "07", "05"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "07": ["7/12", "4/7"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "04": ["3/4", "1/4"]}}, {"line": 7, "op": "03:11", "new": "11", "q1": ["01", "02", "05", "07", "08", "03", "11", "04"], "q2": ["01", "04", "03", "11", "02", "08", "07", "05"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "07": ["7/12", "4/7"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"]}}, {"line": 8, "op": "04:06", "new": "06", "q1": ["01", "02", "05", "07", "08", "03", "11", "04", "06"], "q2": ["01", "04", "06", "03", "11", "02", "08", "07", "05"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "07": ["7/12", "4/7"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"]}}, {"line": 9, "op": "04:16", "new": "16", "q1": ["01", "02", "05", "07", "08", "03", "11", "04", "06", "16"], "q2": ["01", "04", "16", "06", "03", "11", "02", "08", "07", "05"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "07": ["7/12", "4/7"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "16": ["11/14", "4/15"]}}, {"line": 10, "op": "05:15", "new": "15", "q1": ["01", "02", "05", "15", "07", "08", "03", "11", "04", "06", "16"], "q2": ["01", "04", "16", "06", "03", "11", "02", "08", "07", "05", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "07": ["7/12", "4/7"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "16": ["11/14", "4/15"]}}, {"line": 11, "op": "05:23", "new": "23", "q1": ["01", "02", "05", "15", "23", "07", "08", "03", "11", "04", "06", "16"], "q2": ["01", "04", "16", "06", "03", "11", "02", "08", "07", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "16": ["11/14", "4/15"]}}, {"line": 12, "op": "06:10", "new": "10", "q1": ["01", "02", "05", "15", "23", "07", "08", "03", "11", "04", "06", "10", "16"], "q2": ["01", "04", "16", "06", "10", "03", "11", "02", "08", "07", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "10": ["25/32", "8/29"], "16": ["11/14", "4/15"]}}, {"line": 13, "op": "06:12", "new": "12", "q1": ["01", "02", "05", "15", "23", "07", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "10": ["25/32", "8/29"], "12": ["43/55", "11/40"], "16": ["11/14", "4/15"]}}, {"line": 14, "op": "07:09", "new": "09", "q1": ["01", "02", "05", "15", "23", "07", "09", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "09", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "09": ["24/41", "11/19"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "10": ["25/32", "8/29"], "12": ["43/55", "11/40"], "16": ["11/14", "4/15"]}}, {"line": 15, "op": "07:14", "new": "14", "q1": ["01", "02", "05", "15", "23", "07", "09", "14", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "14", "09", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "09": ["24/41", "11/19"], "14": ["41/70", "15/26"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "10": ["25/32", "8/29"], "12": ["43/55", "11/40"], "16": ["11/14", "4/15"]}}, {"line": 16, "op": "07:25", "new": "25", "q1": ["01", "02", "05", "15", "23", "07", "09", "14", "25", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "25", "14", "09", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "09": ["24/41", "11/19"], "14": ["41/70", "15/26"], "25": ["58/99", "19/33"], "08": ["10/17", "5/9"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "10": ["25/32", "8/29"], "12": ["43/55", "11/40"], "16": ["11/14", "4/15"]}}, {"line": 17, "op": "08:13", "new": "13", "q1": ["01", "02", "05", "15", "23", "07", "09", "14", "25", "08", "13", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "13", "07", "25", "14", "09", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "09": ["24/41", "11/19"], "14": ["41/70", "15/26"], "25": ["58/99", "19/33"], "08": ["10/17", "5/9"], "13": ["23/39", "14/25"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "10": ["25/32", "8/29"], "12": ["43/55", "11/40"], "16": ["11/14", "4/15"]}}, {"line": 18, "op": "09:24", "new": "24", "q1": ["01", "02", "05", "15", "23", "07", "09", "24", "14", "25", "08", "13", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "13", "07", "25", "14", "09", "24", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "09": ["24/41", "11/19"], "24": ["89/152", "29/50"], "14": ["41/70", "15/26"], "25": ["58/99", "19/33"], "08": ["10/17", "5/9"], "13": ["23/39", "14/25"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "10": ["25/32", "8/29"], "12": ["43/55", "11/40"], "16": ["11/14", "4/15"]}}, {"line": 19, "op": "10:22", "new": "22", "q1": ["01", "02", "05", "15", "23", "07", "09", "24", "14", "25", "08", "13", "03", "11", "04", "06", "10", "22", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "22", "03", "11", "02", "08", "13", "07", "25", "14", "09", "24", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "09": ["24/41", "11/19"], "24": ["89/152", "29/50"], "14": ["41/70", "15/26"], "25": ["58/99", "19/33"], "08": ["10/17", "5/9"], "13": ["23/39", "14/25"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "10": ["25/32", "8/29"], "22": ["93/119", "21/76"], "12": ["43/55", "11/40"], "16": ["11/14", "4/15"]}}], "final": {"q1": ["01", "02", "05", "15", "23", "07", "09", "24", "14", "25", "08", "13", "03", "11", "04", "06", "10", "22", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "22", "03", "11", "02", "08", "13", "07", "25", "14", "09", "24", "05", "23", "15"], "pos": {"01": ["0", "0"], "02": ["1/2", "1/2"], "05": ["4/7", "3/5"], "15": ["15/26", "8/13"], "23": ["26/45", "11/18"], "07": ["7/12", "4/7"], "09": ["24/41", "11/19"], "24": ["89/152", "29/50"], "14": ["41/70", "15/26"], "25": ["58/99", "19/33"], "08": ["10/17", "5/9"], "13": ["23/39", "14/25"], "03": ["2/3", "1/3"], "11": ["7/10", "3/8"], "04": ["3/4", "1/4"], "06": ["7/9", "3/11"], "10": ["25/32", "8/29"], "22": ["93/119", "21/76"], "12": ["43/55", "11/40"], "16": ["11/14", "4/15"]}}, "stepwise": true, "limit": 300, "renumber": [0, 0], "errors": []}, "dtree integer": {"version": "2.2.0", "kind": "dtree", "positions": "integer", "root": "01", "parents": {"02": "01", "03": "01", "04": "01", "05": "02", "07": "02", "08": "02", "11": "03", "06": "04", "16": "04", "15": "05", "23": "05", "10": "06", "12": "06", "09": "07", "14": "07", "25": "07", "13": "08", "24": "09", "22": "10"}, "steps": [{"line": 1, "op": "01:02", "new": "02", "q1": ["01", "02"], "q2": ["01", "02"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"]}}, {"line": 2, "op": "01:03", "new": "03", "q1": ["01", "02", "03"], "q2": ["01", "03", "02"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "03": ["3170534137668829184", "2594073385365405696"]}}, {"line": 3, "op": "01:04", "new": "04", "q1": ["01", "02", "03", "04"], "q2": ["01", "04", "03", "02"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "03": ["3170534137668829184", "2594073385365405696"], "04": ["3314649325744685056", "2449958197289549824"]}}, {"line": 4, "op": "02:05", "new": "05", "q1": ["01", "02", "05", "03", "04"], "q2": ["01", "04", "03", "02", "05"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "05": ["2954361355555045376", "3026418949592973312"], "03": ["3170534137668829184", "2594073385365405696"], "04": ["3314649325744685056", "2449958197289549824"]}}, {"line": 5, "op": "02:07", "new": "07", "q1": ["01", "02", "05", "07", "03", "04"], "q2": ["01", "04", "03", "02", "07", "05"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "05": ["2954361355555045376", "3026418949592973312"], "07": ["2990390152574009344", "2954361355555045376"], "03": ["3170534137668829184", "2594073385365405696"], "04": ["3314649325744685056", "2449958197289549824"]}}, {"line": 6, "op": "02:08", "new": "08", "q1": ["01", "02", "05", "07", "08", "03", "04"], "q2": ["01", "04", "03", "02", "08", "07", "05"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "05": ["2954361355555045376", "3026418949592973312"], "07": ["2990390152574009344", "2954361355555045376"], "08": ["3008404551083491328", "2918332558536081408"], "03": ["3170534137668829184", "2594073385365405696"], "04": ["3314649325744685056", "2449958197289549824"]}}, {"line": 7, "op": "03:11", "new": "11", "q1": ["01", "02", "05", "07", "08", "03", "11", "04"], "q2": ["01", "04", "03", "11", "02", "08", "07", "05"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "05": ["2954361355555045376", "3026418949592973312"], "07": ["2990390152574009344", "2954361355555045376"], "08": ["3008404551083491328", "2918332558536081408"], "03": ["3170534137668829184", "2594073385365405696"], "11": ["3206562934687793152", "2666130979403333632"], "04": ["3314649325744685056", "2449958197289549824"]}}, {"line": 8, "op": "04:06", "new": "06", "q1": ["01", "02", "05", "07", "08", "03", "11", "04", "06"], "q2": ["01", "04", "06", "03", "11", "02", "08", "07", "05"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "05": ["2954361355555045376", "3026418949592973312"], "07": ["2990390152574009344", "2954361355555045376"], "08": ["3008404551083491328", "2918332558536081408"], "03": ["3170534137668829184", "2594073385365405696"], "11": ["3206562934687793152", "2666130979403333632"], "04": ["3314649325744685056", "2449958197289549824"], "06": ["3350678122763649024", "2485986994308513792"]}}, {"line": 9, "op": "04:16", "new": "16", "q1": ["01", "02", "05", "07", "08", "03", "11", "04", "06", "16"], "q2": ["01", "04", "16", "06", "03", "11", "02", "08", "07", "05"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "05": ["2954361355555045376", "3026418949592973312"], "07": ["2990390152574009344", "2954361355555045376"], "08": ["3008404551083491328", "2918332558536081408"], "03": ["3170534137668829184", "2594073385365405696"], "11": ["3206562934687793152", "2666130979403333632"], "04": ["3314649325744685056", "2449958197289549824"], "06": ["3350678122763649024", "2485986994308513792"], "16": ["3368692521273131008", "2467972595799031808"]}}, {"line": 10, "op": "05:15", "new": "15", "q1": ["01", "02", "05", "15", "07", "08", "03", "11", "04", "06", "16"], "q2": ["01", "04", "16", "06", "03", "11", "02", "08", "07", "05", "15"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "05": ["2954361355555045376", "3026418949592973312"], "15": ["2963368554809786368", "3062447746611937280"], "07": ["2990390152574009344", "2954361355555045376"], "08": ["3008404551083491328", "2918332558536081408"], "03": ["3170534137668829184", "2594073385365405696"], "11": ["3206562934687793152", "2666130979403333632"], "04": ["3314649325744685056", "2449958197289549824"], "06": ["3350678122763649024", "2485986994308513792"], "16": ["3368692521273131008", "2467972595799031808"]}}, {"line": 11, "op": "05:23", "new": "23", "q1": ["01", "02", "05", "15", "23", "07", "08", "03", "11", "04", "06", "16"], "q2": ["01", "04", "16", "06", "03", "11", "02", "08", "07", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "05": ["2954361355555045376", "3026418949592973312"], "15": ["2963368554809786368", "3062447746611937280"], "23": ["2967872154437156864", "3044433348102455296"], "07": ["2990390152574009344", "2954361355555045376"], "08": ["3008404551083491328", "2918332558536081408"], "03": ["3170534137668829184", "2594073385365405696"], "11": ["3206562934687793152", "2666130979403333632"], "04": ["3314649325744685056", "2449958197289549824"], "06": ["3350678122763649024", "2485986994308513792"], "16": ["3368692521273131008", "2467972595799031808"]}}, {"line": 12, "op": "06:10", "new": "10", "q1": ["01", "02", "05", "15", "23", "07", "08", "03", "11", "04", "06", "10", "16"], "q2": ["01", "04", "16", "06", "10", "03", "11", "02", "08", "07", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "05": ["2954361355555045376", "3026418949592973312"], "15": ["2963368554809786368", "3062447746611937280"], "23": ["2967872154437156864", "3044433348102455296"], "07": ["2990390152574009344", "2954361355555045376"], "08": ["3008404551083491328", "2918332558536081408"], "03": ["3170534137668829184", "2594073385365405696"], "11": ["3206562934687793152", "2666130979403333632"], "04": ["3314649325744685056", "2449958197289549824"], "06": ["3350678122763649024", "2485986994308513792"], "10": ["3355181722391019520", "2494994193563254784"], "16": ["3368692521273131008", "2467972595799031808"]}}, {"line": 13, "op": "06:12", "new": "12", "q1": ["01", "02", "05", "15", "23", "07", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "05": ["2954361355555045376", "3026418949592973312"], "15": ["2963368554809786368", "3062447746611937280"], "23": ["2967872154437156864", "3044433348102455296"], "07": ["2990390152574009344", "2954361355555045376"], "08": ["3008404551083491328", "2918332558536081408"], "03": ["3170534137668829184", "2594073385365405696"], "11": ["3206562934687793152", "2666130979403333632"], "04": ["3314649325744685056", "2449958197289549824"], "06": ["3350678122763649024", "2485986994308513792"], "10": ["3355181722391019520", "2494994193563254784"], "12": ["3357433522204704768", "2490490593935884288"], "16": ["3368692521273131008", "2467972595799031808"]}}, {"line": 14, "op": "07:09", "new": "09", "q1": ["01", "02", "05", "15", "23", "07", "09", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "09", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "05": ["2954361355555045376", "3026418949592973312"], "15": ["2963368554809786368", "3062447746611937280"], "23": ["2967872154437156864", "3044433348102455296"], "07": ["2990390152574009344", "2954361355555045376"], "09": ["2994893752201379840", "2972375754064527360"], "08": ["3008404551083491328", "2918332558536081408"], "03": ["3170534137668829184", "2594073385365405696"], "11": ["3206562934687793152", "2666130979403333632"], "04": ["3314649325744685056", "2449958197289549824"], "06": ["3350678122763649024", "2485986994308513792"], "10": ["3355181722391019520", "2494994193563254784"], "12": ["3357433522204704768", "2490490593935884288"], "16": ["3368692521273131008", "2467972595799031808"]}}, {"line": 15, "op": "07:14", "new": "14", "q1": ["01", "02", "05", "15", "23", "07", "09", "14", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "14", "09", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "05": ["2954361355555045376", "3026418949592973312"], "15": ["2963368554809786368", "3062447746611937280"], "23": ["2967872154437156864", "3044433348102455296"], "07": ["2990390152574009344", "2954361355555045376"], "09": ["2994893752201379840", "2972375754064527360"], "14": ["2997145552015065088", "2963368554809786368"], "08": ["3008404551083491328", "2918332558536081408"], "03": ["3170534137668829184", "2594073385365405696"], "11": ["3206562934687793152", "2666130979403333632"], "04": ["3314649325744685056", "2449958197289549824"], "06": ["3350678122763649024", "2485986994308513792"], "10": ["3355181722391019520", "2494994193563254784"], "12": ["3357433522204704768", "2490490593935884288"], "16": ["3368692521273131008", "2467972595799031808"]}}, {"line": 16, "op": "07:25", "new": "25", "q1": ["01", "02", "05", "15", "23", "07", "09", "14", "25", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "25", "14", "09", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "05": ["2954361355555045376", "3026418949592973312"], "15": ["2963368554809786368", "3062447746611937280"], "23": ["2967872154437156864", "3044433348102455296"], "07": ["2990390152574009344", "2954361355555045376"], "09": ["2994893752201379840", "2972375754064527360"], "14": ["2997145552015065088", "2963368554809786368"], "25": ["2998271451921907712", "2958864955182415872"], "08": ["3008404551083491328", "2918332558536081408"], "03": ["3170534137668829184", "2594073385365405696"], "11": ["3206562934687793152", "2666130979403333632"], "04": ["3314649325744685056", "2449958197289549824"], "06": ["3350678122763649024", "2485986994308513792"], "10": ["3355181722391019520", "2494994193563254784"], "12": ["3357433522204704768", "2490490593935884288"], "16": ["3368692521273131008", "2467972595799031808"]}}, {"line": 17, "op": "08:13", "new": "13", "q1": ["01", "02", "05", "15", "23", "07", "09", "14", "25", "08", "13", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "13", "07", "25", "14", "09", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "05": ["2954361355555045376", "3026418949592973312"], "15": ["2963368554809786368", "3062447746611937280"], "23": ["2967872154437156864", "3044433348102455296"], "07": ["2990390152574009344", "2954361355555045376"], "09": ["2994893752201379840", "2972375754064527360"], "14": ["2997145552015065088", "2963368554809786368"], "25": ["2998271451921907712", "2958864955182415872"], "08": ["3008404551083491328", "2918332558536081408"], "13": ["3012908150710861824", "2927339757790822400"], "03": ["3170534137668829184", "2594073385365405696"], "11": ["3206562934687793152", "2666130979403333632"], "04": ["3314649325744685056", "2449958197289549824"], "06": ["3350678122763649024", "2485986994308513792"], "10": ["3355181722391019520", "2494994193563254784"], "12": ["3357433522204704768", "2490490593935884288"], "16": ["3368692521273131008", "2467972595799031808"]}}, {"line": 18, "op": "09:24", "new": "24", "q1": ["01", "02", "05", "15", "23", "07", "09", "24", "14", "25", "08", "13", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "13", "07", "25", "14", "09", "24", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "05": ["2954361355555045376", "3026418949592973312"], "15": ["2963368554809786368", "3062447746611937280"], "23": ["2967872154437156864", "3044433348102455296"], "07": ["2990390152574009344", "2954361355555045376"], "09": ["2994893752201379840", "2972375754064527360"], "24": ["2995456702154801152", "2976879353691897856"], "14": ["2997145552015065088", "2963368554809786368"], "25": ["2998271451921907712", "2958864955182415872"], "08": ["3008404551083491328", "2918332558536081408"], "13": ["3012908150710861824", "2927339757790822400"], "03": ["3170534137668829184", "2594073385365405696"], "11": ["3206562934687793152", "2666130979403333632"], "04": ["3314649325744685056", "2449958197289549824"], "06": ["3350678122763649024", "2485986994308513792"], "10": ["3355181722391019520", "2494994193563254784"], "12": ["3357433522204704768", "2490490593935884288"], "16": ["3368692521273131008", "2467972595799031808"]}}, {"line": 19, "op": "10:22", "new": "22", "q1": ["01", "02", "05", "15", "23", "07", "09", "24", "14", "25", "08", "13", "03", "11", "04", "06", "10", "22", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "22", "03", "11", "02", "08", "13", "07", "25", "14", "09", "24", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "05": ["2954361355555045376", "3026418949592973312"], "15": ["2963368554809786368", "3062447746611937280"], "23": ["2967872154437156864", "3044433348102455296"], "07": ["2990390152574009344", "2954361355555045376"], "09": ["2994893752201379840", "2972375754064527360"], "24": ["2995456702154801152", "2976879353691897856"], "14": ["2997145552015065088", "2963368554809786368"], "25": ["2998271451921907712", "2958864955182415872"], "08": ["3008404551083491328", "2918332558536081408"], "13": ["3012908150710861824", "2927339757790822400"], "03": ["3170534137668829184", "2594073385365405696"], "11": ["3206562934687793152", "2666130979403333632"], "04": ["3314649325744685056", "2449958197289549824"], "06": ["3350678122763649024", "2485986994308513792"], "10": ["3355181722391019520", "2494994193563254784"], "22": ["3355744672344440832", "2497245993376940032"], "12": ["3357433522204704768", "2490490593935884288"], "16": ["3368692521273131008", "2467972595799031808"]}}], "final": {"q1": ["01", "02", "05", "15", "23", "07", "09", "24", "14", "25", "08", "13", "03", "11", "04", "06", "10", "22", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "22", "03", "11", "02", "08", "13", "07", "25", "14", "09", "24", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "2305843009213693952"], "02": ["2882303761517117440", "2882303761517117440"], "05": ["2954361355555045376", "3026418949592973312"], "15": ["2963368554809786368", "3062447746611937280"], "23": ["2967872154437156864", "3044433348102455296"], "07": ["2990390152574009344", "2954361355555045376"], "09": ["2994893752201379840", "2972375754064527360"], "24": ["2995456702154801152", "2976879353691897856"], "14": ["2997145552015065088", "2963368554809786368"], "25": ["2998271451921907712", "2958864955182415872"], "08": ["3008404551083491328", "2918332558536081408"], "13": ["3012908150710861824", "2927339757790822400"], "03": ["3170534137668829184", "2594073385365405696"], "11": ["3206562934687793152", "2666130979403333632"], "04": ["3314649325744685056", "2449958197289549824"], "06": ["3350678122763649024", "2485986994308513792"], "10": ["3355181722391019520", "2494994193563254784"], "22": ["3355744672344440832", "2497245993376940032"], "12": ["3357433522204704768", "2490490593935884288"], "16": ["3368692521273131008", "2467972595799031808"]}}, "stepwise": true, "limit": 300, "renumber": [0, 0], "errors": []}, "euler rational": {"version": "2.2.0", "kind": "euler", "positions": "rational", "root": "01", "parents": {"02": "01", "03": "01", "04": "01", "05": "02", "07": "02", "08": "02", "11": "03", "06": "04", "16": "04", "15": "05", "23": "05", "10": "06", "12": "06", "09": "07", "14": "07", "25": "07", "13": "08", "24": "09", "22": "10"}, "steps": [{"line": 1, "op": "01:02", "new": "02", "q1": ["01", "02"], "q2": ["01", "02"], "pos": {"01": ["0", "1"], "02": ["1/2", "1/2"]}, "cells": [["01", "0"], ["02", "1/2"], [")01", "1"]], "open": {"01": 0, "02": 1}, "end": {"01": 2, "02": 1}}, {"line": 2, "op": "01:03", "new": "03", "q1": ["01", "02", "03"], "q2": ["01", "03", "02"], "pos": {"01": ["0", "1"], "02": ["1/2", "1/2"], "03": ["2/3", "2/3"]}, "cells": [["01", "0"], ["02", "1/2"], ["03", "2/3"], [")01", "1"]], "open": {"01": 0, "02": 1, "03": 2}, "end": {"01": 3, "02": 1, "03": 2}}, {"line": 3, "op": "01:04", "new": "04", "q1": ["01", "02", "03", "04"], "q2": ["01", "04", "03", "02"], "pos": {"01": ["0", "1"], "02": ["1/2", "1/2"], "03": ["2/3", "2/3"], "04": ["3/4", "3/4"]}, "cells": [["01", "0"], ["02", "1/2"], ["03", "2/3"], ["04", "3/4"], [")01", "1"]], "open": {"01": 0, "02": 1, "03": 2, "04": 3}, "end": {"01": 4, "02": 1, "03": 2, "04": 3}}, {"line": 4, "op": "02:05", "new": "05", "q1": ["01", "02", "05", "03", "04"], "q2": ["01", "04", "03", "02", "05"], "pos": {"01": ["0", "1"], "02": ["1/2", "3/5"], "05": ["4/7", "4/7"], "03": ["2/3", "2/3"], "04": ["3/4", "3/4"]}, "cells": [["01", "0"], ["02", "1/2"], ["05", "4/7"], [")02", "3/5"], ["03", "2/3"], ["04", "3/4"], [")01", "1"]], "open": {"01": 0, "02": 1, "05": 2, "03": 4, "04": 5}, "end": {"01": 6, "02": 3, "05": 2, "03": 4, "04": 5}}, {"line": 5, "op": "02:07", "new": "07", "q1": ["01", "02", "05", "07", "03", "04"], "q2": ["01", "04", "03", "02", "07", "05"], "pos": {"01": ["0", "1"], "02": ["1/2", "3/5"], "05": ["4/7", "4/7"], "07": ["7/12", "7/12"], "03": ["2/3", "2/3"], "04": ["3/4", "3/4"]}, "cells": [["01", "0"], ["02", "1/2"], ["05", "4/7"], ["07", "7/12"], [")02", "3/5"], ["03", "2/3"], ["04", "3/4"], [")01", "1"]], "open": {"01": 0, "02": 1, "05": 2, "07": 3, "03": 5, "04": 6}, "end": {"01": 7, "02": 4, "05": 2, "07": 3, "03": 5, "04": 6}}, {"line": 6, "op": "02:08", "new": "08", "q1": ["01", "02", "05", "07", "08", "03", "04"], "q2": ["01", "04", "03", "02", "08", "07", "05"], "pos": {"01": ["0", "1"], "02": ["1/2", "3/5"], "05": ["4/7", "4/7"], "07": ["7/12", "7/12"], "08": ["10/17", "10/17"], "03": ["2/3", "2/3"], "04": ["3/4", "3/4"]}, "cells": [["01", "0"], ["02", "1/2"], ["05", "4/7"], ["07", "7/12"], ["08", "10/17"], [")02", "3/5"], ["03", "2/3"], ["04", "3/4"], [")01", "1"]], "open": {"01": 0, "02": 1, "05": 2, "07": 3, "08": 4, "03": 6, "04": 7}, "end": {"01": 8, "02": 5, "05": 2, "07": 3, "08": 4, "03": 6, "04": 7}}, {"line": 7, "op": "03:11", "new": "11", "q1": ["01", "02", "05", "07", "08", "03", "11", "04"], "q2": ["01", "04", "03", "11", "02", "08", "07", "05"], "pos": {"01": ["0", "1"], "02": ["1/2", "3/5"], "05": ["4/7", "4/7"], "07": ["7/12", "7/12"], "08": ["10/17", "10/17"], "03": ["2/3", "5/7"], "11": ["7/10", "7/10"], "04": ["3/4", "3/4"]}, "cells": [["01", "0"], ["02", "1/2"], ["05", "4/7"], ["07", "7/12"], ["08", "10/17"], [")02", "3/5"], ["03", "2/3"], ["11", "7/10"], [")03", "5/7"], ["04", "3/4"], [")01", "1"]], "open": {"01": 0, "02": 1, "05": 2, "07": 3, "08": 4, "03": 6, "11": 7, "04": 9}, "end": {"01": 10, "02": 5, "05": 2, "07": 3, "08": 4, "03": 8, "11": 7, "04": 9}}, {"line": 8, "op": "04:06", "new": "06", "q1": ["01", "02", "05", "07", "08", "03", "11", "04", "06"], "q2": ["01", "04", "06", "03", "11", "02", "08", "07", "05"], "pos": {"01": ["0", "1"], "02": ["1/2", "3/5"], "05": ["4/7", "4/7"], "07": ["7/12", "7/12"], "08": ["10/17", "10/17"], "03": ["2/3", "5/7"], "11": ["7/10", "7/10"], "04": ["3/4", "4/5"], "06": ["7/9", "7/9"]}, "cells": [["01", "0"], ["02", "1/2"], ["05", "4/7"], ["07", "7/12"], ["08", "10/17"], [")02", "3/5"], ["03", "2/3"], ["11", "7/10"], [")03", "5/7"], ["04", "3/4"], ["06", "7/9"], [")04", "4/5"], [")01", "1"]], "open": {"01": 0, "02": 1, "05": 2, "07": 3, "08": 4, "03": 6, "11": 7, "04": 9, "06": 10}, "end": {"01": 12, "02": 5, "05": 2, "07": 3, "08": 4, "03": 8, "11": 7, "04": 11, "06": 10}}, {"line": 9, "op": "04:16", "new": "16", "q1": ["01", "02", "05", "07", "08", "03", "11", "04", "06", "16"], "q2": ["01", "04", "16", "06", "03", "11", "02", "08", "07", "05"], "pos": {"01": ["0", "1"], "02": ["1/2", "3/5"], "05": ["4/7", "4/7"], "07": ["7/12", "7/12"], "08": ["10/17", "10/17"], "03": ["2/3", "5/7"], "11": ["7/10", "7/10"], "04": ["3/4", "4/5"], "06": ["7/9", "7/9"], "16": ["11/14", "11/14"]}, "cells": [["01", "0"], ["02", "1/2"], ["05", "4/7"], ["07", "7/12"], ["08", "10/17"], [")02", "3/5"], ["03", "2/3"], ["11", "7/10"], [")03", "5/7"], ["04", "3/4"], ["06", "7/9"], ["16", "11/14"], [")04", "4/5"], [")01", "1"]], "open": {"01": 0, "02": 1, "05": 2, "07": 3, "08": 4, "03": 6, "11": 7, "04": 9, "06": 10, "16": 11}, "end": {"01": 13, "02": 5, "05": 2, "07": 3, "08": 4, "03": 8, "11": 7, "04": 12, "06": 10, "16": 11}}, {"line": 10, "op": "05:15", "new": "15", "q1": ["01", "02", "05", "15", "07", "08", "03", "11", "04", "06", "16"], "q2": ["01", "04", "16", "06", "03", "11", "02", "08", "07", "05", "15"], "pos": {"01": ["0", "1"], "02": ["1/2", "3/5"], "05": ["4/7", "11/19"], "15": ["15/26", "15/26"], "07": ["7/12", "7/12"], "08": ["10/17", "10/17"], "03": ["2/3", "5/7"], "11": ["7/10", "7/10"], "04": ["3/4", "4/5"], "06": ["7/9", "7/9"], "16": ["11/14", "11/14"]}, "cells": [["01", "0"], ["02", "1/2"], ["05", "4/7"], ["15", "15/26"], [")05", "11/19"], ["07", "7/12"], ["08", "10/17"], [")02", "3/5"], ["03", "2/3"], ["11", "7/10"], [")03", "5/7"], ["04", "3/4"], ["06", "7/9"], ["16", "11/14"], [")04", "4/5"], [")01", "1"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "07": 5, "08": 6, "03": 8, "11": 9, "04": 11, "06": 12, "16": 13}, "end": {"01": 15, "02": 7, "05": 4, "15": 3, "07": 5, "08": 6, "03": 10, "11": 9, "04": 14, "06": 12, "16": 13}}, {"line": 11, "op": "05:23", "new": "23", "q1": ["01", "02", "05", "15", "23", "07", "08", "03", "11", "04", "06", "16"], "q2": ["01", "04", "16", "06", "03", "11", "02", "08", "07", "05", "23", "15"], "pos": {"01": ["0", "1"], "02": ["1/2", "3/5"], "05": ["4/7", "11/19"], "15": ["15/26", "15/26"], "23": ["26/45", "26/45"], "07": ["7/12", "7/12"], "08": ["10/17", "10/17"], "03": ["2/3", "5/7"], "11": ["7/10", "7/10"], "04": ["3/4", "4/5"], "06": ["7/9", "7/9"], "16": ["11/14", "11/14"]}, "cells": [["01", "0"], ["02", "1/2"], ["05", "4/7"], ["15", "15/26"], ["23", "26/45"], [")05", "11/19"], ["07", "7/12"], ["08", "10/17"], [")02", "3/5"], ["03", "2/3"], ["11", "7/10"], [")03", "5/7"], ["04", "3/4"], ["06", "7/9"], ["16", "11/14"], [")04", "4/5"], [")01", "1"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "08": 7, "03": 9, "11": 10, "04": 12, "06": 13, "16": 14}, "end": {"01": 16, "02": 8, "05": 5, "15": 3, "23": 4, "07": 6, "08": 7, "03": 11, "11": 10, "04": 15, "06": 13, "16": 14}}, {"line": 12, "op": "06:10", "new": "10", "q1": ["01", "02", "05", "15", "23", "07", "08", "03", "11", "04", "06", "10", "16"], "q2": ["01", "04", "16", "06", "10", "03", "11", "02", "08", "07", "05", "23", "15"], "pos": {"01": ["0", "1"], "02": ["1/2", "3/5"], "05": ["4/7", "11/19"], "15": ["15/26", "15/26"], "23": ["26/45", "26/45"], "07": ["7/12", "7/12"], "08": ["10/17", "10/17"], "03": ["2/3", "5/7"], "11": ["7/10", "7/10"], "04": ["3/4", "4/5"], "06": ["7/9", "18/23"], "10": ["25/32", "25/32"], "16": ["11/14", "11/14"]}, "cells": [["01", "0"], ["02", "1/2"], ["05", "4/7"], ["15", "15/26"], ["23", "26/45"], [")05", "11/19"], ["07", "7/12"], ["08", "10/17"], [")02", "3/5"], ["03", "2/3"], ["11", "7/10"], [")03", "5/7"], ["04", "3/4"], ["06", "7/9"], ["10", "25/32"], [")06", "18/23"], ["16", "11/14"], [")04", "4/5"], [")01", "1"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "08": 7, "03": 9, "11": 10, "04": 12, "06": 13, "10": 14, "16": 16}, "end": {"01": 18, "02": 8, "05": 5, "15": 3, "23": 4, "07": 6, "08": 7, "03": 11, "11": 10, "04": 17, "06": 15, "10": 14, "16": 16}}, {"line": 13, "op": "06:12", "new": "12", "q1": ["01", "02", "05", "15", "23", "07", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "05", "23", "15"], "pos": {"01": ["0", "1"], "02": ["1/2", "3/5"], "05": ["4/7", "11/19"], "15": ["15/26", "15/26"], "23": ["26/45", "26/45"], "07": ["7/12", "7/12"], "08": ["10/17", "10/17"], "03": ["2/3", "5/7"], "11": ["7/10", "7/10"], "04": ["3/4", "4/5"], "06": ["7/9", "18/23"], "10": ["25/32", "25/32"], "12": ["43/55", "43/55"], "16": ["11/14", "11/14"]}, "cells": [["01", "0"], ["02", "1/2"], ["05", "4/7"], ["15", "15/26"], ["23", "26/45"], [")05", "11/19"], ["07", "7/12"], ["08", "10/17"], [")02", "3/5"], ["03", "2/3"], ["11", "7/10"], [")03", "5/7"], ["04", "3/4"], ["06", "7/9"], ["10", "25/32"], ["12", "43/55"], [")06", "18/23"], ["16", "11/14"], [")04", "4/5"], [")01", "1"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "08": 7, "03": 9, "11": 10, "04": 12, "06": 13, "10": 14, "12": 15, "16": 17}, "end": {"01": 19, "02": 8, "05": 5, "15": 3, "23": 4, "07": 6, "08": 7, "03": 11, "11": 10, "04": 18, "06": 16, "10": 14, "12": 15, "16": 17}}, {"line": 14, "op": "07:09", "new": "09", "q1": ["01", "02", "05", "15", "23", "07", "09", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "09", "05", "23", "15"], "pos": {"01": ["0", "1"], "02": ["1/2", "3/5"], "05": ["4/7", "11/19"], "15": ["15/26", "15/26"], "23": ["26/45", "26/45"], "07": ["7/12", "17/29"], "09": ["24/41", "24/41"], "08": ["10/17", "10/17"], "03": ["2/3", "5/7"], "11": ["7/10", "7/10"], "04": ["3/4", "4/5"], "06": ["7/9", "18/23"], "10": ["25/32", "25/32"], "12": ["43/55", "43/55"], "16": ["11/14", "11/14"]}, "cells": [["01", "0"], ["02", "1/2"], ["05", "4/7"], ["15", "15/26"], ["23", "26/45"], [")05", "11/19"], ["07", "7/12"], ["09", "24/41"], [")07", "17/29"], ["08", "10/17"], [")02", "3/5"], ["03", "2/3"], ["11", "7/10"], [")03", "5/7"], ["04", "3/4"], ["06", "7/9"], ["10", "25/32"], ["12", "43/55"], [")06", "18/23"], ["16", "11/14"], [")04", "4/5"], [")01", "1"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "09": 7, "08": 9, "03": 11, "11": 12, "04": 14, "06": 15, "10": 16, "12": 17, "16": 19}, "end": {"01": 21, "02": 10, "05": 5, "15": 3, "23": 4, "07": 8, "09": 7, "08": 9, "03": 13, "11": 12, "04": 20, "06": 18, "10": 16, "12": 17, "16": 19}}, {"line": 15, "op": "07:14", "new": "14", "q1": ["01", "02", "05", "15", "23", "07", "09", "14", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "14", "09", "05", "23", "15"], "pos": {"01": ["0", "1"], "02": ["1/2", "3/5"], "05": ["4/7", "11/19"], "15": ["15/26", "15/26"], "23": ["26/45", "26/45"], "07": ["7/12", "17/29"], "09": ["24/41", "24/41"], "14": ["41/70", "41/70"], "08": ["10/17", "10/17"], "03": ["2/3", "5/7"], "11": ["7/10", "7/10"], "04": ["3/4", "4/5"], "06": ["7/9", "18/23"], "10": ["25/32", "25/32"], "12": ["43/55", "43/55"], "16": ["11/14", "11/14"]}, "cells": [["01", "0"], ["02", "1/2"], ["05", "4/7"], ["15", "15/26"], ["23", "26/45"], [")05", "11/19"], ["07", "7/12"], ["09", "24/41"], ["14", "41/70"], [")07", "17/29"], ["08", "10/17"], [")02", "3/5"], ["03", "2/3"], ["11", "7/10"], [")03", "5/7"], ["04", "3/4"], ["06", "7/9"], ["10", "25/32"], ["12", "43/55"], [")06", "18/23"], ["16", "11/14"], [")04", "4/5"], [")01", "1"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "09": 7, "14": 8, "08": 10, "03": 12, "11": 13, "04": 15, "06": 16, "10": 17, "12": 18, "16": 20}, "end": {"01": 22, "02": 11, "05": 5, "15": 3, "23": 4, "07": 9, "09": 7, "14": 8, "08": 10, "03": 14, "11": 13, "04": 21, "06": 19, "10": 17, "12": 18, "16": 20}}, {"line": 16, "op": "07:25", "new": "25", "q1": ["01", "02", "05", "15", "23", "07", "09", "14", "25", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "25", "14", "09", "05", "23", "15"], "pos": {"01": ["0", "1"], "02": ["1/2", "3/5"], "05": ["4/7", "11/19"], "15": ["15/26", "15/26"], "23": ["26/45", "26/45"], "07": ["7/12", "17/29"], "09": ["24/41", "24/41"], "14": ["41/70", "41/70"], "25": ["58/99", "58/99"], "08": ["10/17", "10/17"], "03": ["2/3", "5/7"], "11": ["7/10", "7/10"], "04": ["3/4", "4/5"], "06": ["7/9", "18/23"], "10": ["25/32", "25/32"], "12": ["43/55", "43/55"], "16": ["11/14", "11/14"]}, "cells": [["01", "0"], ["02", "1/2"], ["05", "4/7"], ["15", "15/26"], ["23", "26/45"], [")05", "11/19"], ["07", "7/12"], ["09", "24/41"], ["14", "41/70"], ["25", "58/99"], [")07", "17/29"], ["08", "10/17"], [")02", "3/5"], ["03", "2/3"], ["11", "7/10"], [")03", "5/7"], ["04", "3/4"], ["06", "7/9"], ["10", "25/32"], ["12", "43/55"], [")06", "18/23"], ["16", "11/14"], [")04", "4/5"], [")01", "1"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "09": 7, "14": 8, "25": 9, "08": 11, "03": 13, "11": 14, "04": 16, "06": 17, "10": 18, "12": 19, "16": 21}, "end": {"01": 23, "02": 12, "05": 5, "15": 3, "23": 4, "07": 10, "09": 7, "14": 8, "25": 9, "08": 11, "03": 15, "11": 14, "04": 22, "06": 20, "10": 18, "12": 19, "16": 21}}, {"line": 17, "op": "08:13", "new": "13", "q1": ["01", "02", "05", "15", "23", "07", "09", "14", "25", "08", "13", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "13", "07", "25", "14", "09", "05", "23", "15"], "pos": {"01": ["0", "1"], "02": ["1/2", "3/5"], "05": ["4/7", "11/19"], "15": ["15/26", "15/26"], "23": ["26/45", "26/45"], "07": ["7/12", "17/29"], "09": ["24/41", "24/41"], "14": ["41/70", "41/70"], "25": ["58/99", "58/99"], "08": ["10/17", "13/22"], "13": ["23/39", "23/39"], "03": ["2/3", "5/7"], "11": ["7/10", "7/10"], "04": ["3/4", "4/5"], "06": ["7/9", "18/23"], "10": ["25/32", "25/32"], "12": ["43/55", "43/55"], "16": ["11/14", "11/14"]}, "cells": [["01", "0"], ["02", "1/2"], ["05", "4/7"], ["15", "15/26"], ["23", "26/45"], [")05", "11/19"], ["07", "7/12"], ["09", "24/41"], ["14", "41/70"], ["25", "58/99"], [")07", "17/29"], ["08", "10/17"], ["13", "23/39"], [")08", "13/22"], [")02", "3/5"], ["03", "2/3"], ["11", "7/10"], [")03", "5/7"], ["04", "3/4"], ["06", "7/9"], ["10", "25/32"], ["12", "43/55"], [")06", "18/23"], ["16", "11/14"], [")04", "4/5"], [")01", "1"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "09": 7, "14": 8, "25": 9, "08": 11, "13": 12, "03": 15, "11": 16, "04": 18, "06": 19, "10": 20, "12": 21, "16": 23}, "end": {"01": 25, "02": 14, "05": 5, "15": 3, "23": 4, "07": 10, "09": 7, "14": 8, "25": 9, "08": 13, "13": 12, "03": 17, "11": 16, "04": 24, "06": 22, "10": 20, "12": 21, "16": 23}}, {"line": 18, "op": "09:24", "new": "24", "q1": ["01", "02", "05", "15", "23", "07", "09", "24", "14", "25", "08", "13", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "13", "07", "25", "14", "09", "24", "05", "23", "15"], "pos": {"01": ["0", "1"], "02": ["1/2", "3/5"], "05": ["4/7", "11/19"], "15": ["15/26", "15/26"], "23": ["26/45", "26/45"], "07": ["7/12", "17/29"], "09": ["24/41", "65/111"], "24": ["89/152", "89/152"], "14": ["41/70", "41/70"], "25": ["58/99", "58/99"], "08": ["10/17", "13/22"], "13": ["23/39", "23/39"], "03": ["2/3", "5/7"], "11": ["7/10", "7/10"], "04": ["3/4", "4/5"], "06": ["7/9", "18/23"], "10": ["25/32", "25/32"], "12": ["43/55", "43/55"], "16": ["11/14", "11/14"]}, "cells": [["01", "0"], ["02", "1/2"], ["05", "4/7"], ["15", "15/26"], ["23", "26/45"], [")05", "11/19"], ["07", "7/12"], ["09", "24/41"], ["24", "89/152"], [")09", "65/111"], ["14", "41/70"], ["25", "58/99"], [")07", "17/29"], ["08", "10/17"], ["13", "23/39"], [")08", "13/22"], [")02", "3/5"], ["03", "2/3"], ["11", "7/10"], [")03", "5/7"], ["04", "3/4"], ["06", "7/9"], ["10", "25/32"], ["12", "43/55"], [")06", "18/23"], ["16", "11/14"], [")04", "4/5"], [")01", "1"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "09": 7, "24": 8, "14": 10, "25": 11, "08": 13, "13": 14, "03": 17, "11": 18, "04": 20, "06": 21, "10": 22, "12": 23, "16": 25}, "end": {"01": 27, "02": 16, "05": 5, "15": 3, "23": 4, "07": 12, "09": 9, "24": 8, "14": 10, "25": 11, "08": 15, "13": 14, "03": 19, "11": 18, "04": 26, "06": 24, "10": 22, "12": 23, "16": 25}}, {"line": 19, "op": "10:22", "new": "22", "q1": ["01", "02", "05", "15", "23", "07", "09", "24", "14", "25", "08", "13", "03", "11", "04", "06", "10", "22", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "22", "03", "11", "02", "08", "13", "07", "25", "14", "09", "24", "05", "23", "15"], "pos": {"01": ["0", "1"], "02": ["1/2", "3/5"], "05": ["4/7", "11/19"], "15": ["15/26", "15/26"], "23": ["26/45", "26/45"], "07": ["7/12", "17/29"], "09": ["24/41", "65/111"], "24": ["89/152", "89/152"], "14": ["41/70", "41/70"], "25": ["58/99", "58/99"], "08": ["10/17", "13/22"], "13": ["23/39", "23/39"], "03": ["2/3", "5/7"], "11": ["7/10", "7/10"], "04": ["3/4", "4/5"], "06": ["7/9", "18/23"], "10": ["25/32", "68/87"], "22": ["93/119", "93/119"], "12": ["43/55", "43/55"], "16": ["11/14", "11/14"]}, "cells": [["01", "0"], ["02", "1/2"], ["05", "4/7"], ["15", "15/26"], ["23", "26/45"], [")05", "11/19"], ["07", "7/12"], ["09", "24/41"], ["24", "89/152"], [")09", "65/111"], ["14", "41/70"], ["25", "58/99"], [")07", "17/29"], ["08", "10/17"], ["13", "23/39"], [")08", "13/22"], [")02", "3/5"], ["03", "2/3"], ["11", "7/10"], [")03", "5/7"], ["04", "3/4"], ["06", "7/9"], ["10", "25/32"], ["22", "93/119"], [")10", "68/87"], ["12", "43/55"], [")06", "18/23"], ["16", "11/14"], [")04", "4/5"], [")01", "1"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "09": 7, "24": 8, "14": 10, "25": 11, "08": 13, "13": 14, "03": 17, "11": 18, "04": 20, "06": 21, "10": 22, "22": 23, "12": 25, "16": 27}, "end": {"01": 29, "02": 16, "05": 5, "15": 3, "23": 4, "07": 12, "09": 9, "24": 8, "14": 10, "25": 11, "08": 15, "13": 14, "03": 19, "11": 18, "04": 28, "06": 26, "10": 24, "22": 23, "12": 25, "16": 27}}], "final": {"q1": ["01", "02", "05", "15", "23", "07", "09", "24", "14", "25", "08", "13", "03", "11", "04", "06", "10", "22", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "22", "03", "11", "02", "08", "13", "07", "25", "14", "09", "24", "05", "23", "15"], "pos": {"01": ["0", "1"], "02": ["1/2", "3/5"], "05": ["4/7", "11/19"], "15": ["15/26", "15/26"], "23": ["26/45", "26/45"], "07": ["7/12", "17/29"], "09": ["24/41", "65/111"], "24": ["89/152", "89/152"], "14": ["41/70", "41/70"], "25": ["58/99", "58/99"], "08": ["10/17", "13/22"], "13": ["23/39", "23/39"], "03": ["2/3", "5/7"], "11": ["7/10", "7/10"], "04": ["3/4", "4/5"], "06": ["7/9", "18/23"], "10": ["25/32", "68/87"], "22": ["93/119", "93/119"], "12": ["43/55", "43/55"], "16": ["11/14", "11/14"]}, "cells": [["01", "0"], ["02", "1/2"], ["05", "4/7"], ["15", "15/26"], ["23", "26/45"], [")05", "11/19"], ["07", "7/12"], ["09", "24/41"], ["24", "89/152"], [")09", "65/111"], ["14", "41/70"], ["25", "58/99"], [")07", "17/29"], ["08", "10/17"], ["13", "23/39"], [")08", "13/22"], [")02", "3/5"], ["03", "2/3"], ["11", "7/10"], [")03", "5/7"], ["04", "3/4"], ["06", "7/9"], ["10", "25/32"], ["22", "93/119"], [")10", "68/87"], ["12", "43/55"], [")06", "18/23"], ["16", "11/14"], [")04", "4/5"], [")01", "1"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "09": 7, "24": 8, "14": 10, "25": 11, "08": 13, "13": 14, "03": 17, "11": 18, "04": 20, "06": 21, "10": 22, "22": 23, "12": 25, "16": 27}, "end": {"01": 29, "02": 16, "05": 5, "15": 3, "23": 4, "07": 12, "09": 9, "24": 8, "14": 10, "25": 11, "08": 15, "13": 14, "03": 19, "11": 18, "04": 28, "06": 26, "10": 24, "22": 23, "12": 25, "16": 27}}, "stepwise": true, "limit": 300, "renumber": [0], "errors": []}, "euler integer": {"version": "2.2.0", "kind": "euler", "positions": "integer", "root": "01", "parents": {"02": "01", "03": "01", "04": "01", "05": "02", "07": "02", "08": "02", "11": "03", "06": "04", "16": "04", "15": "05", "23": "05", "10": "06", "12": "06", "09": "07", "14": "07", "25": "07", "13": "08", "24": "09", "22": "10"}, "steps": [{"line": 1, "op": "01:02", "new": "02", "q1": ["01", "02"], "q2": ["01", "02"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "2882303761517117440"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1}, "end": {"01": 2, "02": 1}}, {"line": 2, "op": "01:03", "new": "03", "q1": ["01", "02", "03"], "q2": ["01", "03", "02"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "2882303761517117440"], "03": ["3170534137668829184", "3170534137668829184"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["03", "3170534137668829184"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "03": 2}, "end": {"01": 3, "02": 1, "03": 2}}, {"line": 3, "op": "01:04", "new": "04", "q1": ["01", "02", "03", "04"], "q2": ["01", "04", "03", "02"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "2882303761517117440"], "03": ["3170534137668829184", "3170534137668829184"], "04": ["3314649325744685056", "3314649325744685056"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["03", "3170534137668829184"], ["04", "3314649325744685056"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "03": 2, "04": 3}, "end": {"01": 4, "02": 1, "03": 2, "04": 3}}, {"line": 4, "op": "02:05", "new": "05", "q1": ["01", "02", "05", "03", "04"], "q2": ["01", "04", "03", "02", "05"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "3026418949592973312"], "05": ["2954361355555045376", "2954361355555045376"], "03": ["3170534137668829184", "3170534137668829184"], "04": ["3314649325744685056", "3314649325744685056"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["05", "2954361355555045376"], [")02", "3026418949592973312"], ["03", "3170534137668829184"], ["04", "3314649325744685056"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "05": 2, "03": 4, "04": 5}, "end": {"01": 6, "02": 3, "05": 2, "03": 4, "04": 5}}, {"line": 5, "op": "02:07", "new": "07", "q1": ["01", "02", "05", "07", "03", "04"], "q2": ["01", "04", "03", "02", "07", "05"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "3026418949592973312"], "05": ["2954361355555045376", "2954361355555045376"], "07": ["2990390152574009344", "2990390152574009344"], "03": ["3170534137668829184", "3170534137668829184"], "04": ["3314649325744685056", "3314649325744685056"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["05", "2954361355555045376"], ["07", "2990390152574009344"], [")02", "3026418949592973312"], ["03", "3170534137668829184"], ["04", "3314649325744685056"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "05": 2, "07": 3, "03": 5, "04": 6}, "end": {"01": 7, "02": 4, "05": 2, "07": 3, "03": 5, "04": 6}}, {"line": 6, "op": "02:08", "new": "08", "q1": ["01", "02", "05", "07", "08", "03", "04"], "q2": ["01", "04", "03", "02", "08", "07", "05"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "3026418949592973312"], "05": ["2954361355555045376", "2954361355555045376"], "07": ["2990390152574009344", "2990390152574009344"], "08": ["3008404551083491328", "3008404551083491328"], "03": ["3170534137668829184", "3170534137668829184"], "04": ["3314649325744685056", "3314649325744685056"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["05", "2954361355555045376"], ["07", "2990390152574009344"], ["08", "3008404551083491328"], [")02", "3026418949592973312"], ["03", "3170534137668829184"], ["04", "3314649325744685056"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "05": 2, "07": 3, "08": 4, "03": 6, "04": 7}, "end": {"01": 8, "02": 5, "05": 2, "07": 3, "08": 4, "03": 6, "04": 7}}, {"line": 7, "op": "03:11", "new": "11", "q1": ["01", "02", "05", "07", "08", "03", "11", "04"], "q2": ["01", "04", "03", "11", "02", "08", "07", "05"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "3026418949592973312"], "05": ["2954361355555045376", "2954361355555045376"], "07": ["2990390152574009344", "2990390152574009344"], "08": ["3008404551083491328", "3008404551083491328"], "03": ["3170534137668829184", "3242591731706757120"], "11": ["3206562934687793152", "3206562934687793152"], "04": ["3314649325744685056", "3314649325744685056"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["05", "2954361355555045376"], ["07", "2990390152574009344"], ["08", "3008404551083491328"], [")02", "3026418949592973312"], ["03", "3170534137668829184"], ["11", "3206562934687793152"], [")03", "3242591731706757120"], ["04", "3314649325744685056"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "05": 2, "07": 3, "08": 4, "03": 6, "11": 7, "04": 9}, "end": {"01": 10, "02": 5, "05": 2, "07": 3, "08": 4, "03": 8, "11": 7, "04": 9}}, {"line": 8, "op": "04:06", "new": "06", "q1": ["01", "02", "05", "07", "08", "03", "11", "04", "06"], "q2": ["01", "04", "06", "03", "11", "02", "08", "07", "05"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "3026418949592973312"], "05": ["2954361355555045376", "2954361355555045376"], "07": ["2990390152574009344", "2990390152574009344"], "08": ["3008404551083491328", "3008404551083491328"], "03": ["3170534137668829184", "3242591731706757120"], "11": ["3206562934687793152", "3206562934687793152"], "04": ["3314649325744685056", "3386706919782612992"], "06": ["3350678122763649024", "3350678122763649024"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["05", "2954361355555045376"], ["07", "2990390152574009344"], ["08", "3008404551083491328"], [")02", "3026418949592973312"], ["03", "3170534137668829184"], ["11", "3206562934687793152"], [")03", "3242591731706757120"], ["04", "3314649325744685056"], ["06", "3350678122763649024"], [")04", "3386706919782612992"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "05": 2, "07": 3, "08": 4, "03": 6, "11": 7, "04": 9, "06": 10}, "end": {"01": 12, "02": 5, "05": 2, "07": 3, "08": 4, "03": 8, "11": 7, "04": 11, "06": 10}}, {"line": 9, "op": "04:16", "new": "16", "q1": ["01", "02", "05", "07", "08", "03", "11", "04", "06", "16"], "q2": ["01", "04", "16", "06", "03", "11", "02", "08", "07", "05"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "3026418949592973312"], "05": ["2954361355555045376", "2954361355555045376"], "07": ["2990390152574009344", "2990390152574009344"], "08": ["3008404551083491328", "3008404551083491328"], "03": ["3170534137668829184", "3242591731706757120"], "11": ["3206562934687793152", "3206562934687793152"], "04": ["3314649325744685056", "3386706919782612992"], "06": ["3350678122763649024", "3350678122763649024"], "16": ["3368692521273131008", "3368692521273131008"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["05", "2954361355555045376"], ["07", "2990390152574009344"], ["08", "3008404551083491328"], [")02", "3026418949592973312"], ["03", "3170534137668829184"], ["11", "3206562934687793152"], [")03", "3242591731706757120"], ["04", "3314649325744685056"], ["06", "3350678122763649024"], ["16", "3368692521273131008"], [")04", "3386706919782612992"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "05": 2, "07": 3, "08": 4, "03": 6, "11": 7, "04": 9, "06": 10, "16": 11}, "end": {"01": 13, "02": 5, "05": 2, "07": 3, "08": 4, "03": 8, "11": 7, "04": 12, "06": 10, "16": 11}}, {"line": 10, "op": "05:15", "new": "15", "q1": ["01", "02", "05", "15", "07", "08", "03", "11", "04", "06", "16"], "q2": ["01", "04", "16", "06", "03", "11", "02", "08", "07", "05", "15"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "3026418949592973312"], "05": ["2954361355555045376", "2972375754064527360"], "15": ["2963368554809786368", "2963368554809786368"], "07": ["2990390152574009344", "2990390152574009344"], "08": ["3008404551083491328", "3008404551083491328"], "03": ["3170534137668829184", "3242591731706757120"], "11": ["3206562934687793152", "3206562934687793152"], "04": ["3314649325744685056", "3386706919782612992"], "06": ["3350678122763649024", "3350678122763649024"], "16": ["3368692521273131008", "3368692521273131008"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["05", "2954361355555045376"], ["15", "2963368554809786368"], [")05", "2972375754064527360"], ["07", "2990390152574009344"], ["08", "3008404551083491328"], [")02", "3026418949592973312"], ["03", "3170534137668829184"], ["11", "3206562934687793152"], [")03", "3242591731706757120"], ["04", "3314649325744685056"], ["06", "3350678122763649024"], ["16", "3368692521273131008"], [")04", "3386706919782612992"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "07": 5, "08": 6, "03": 8, "11": 9, "04": 11, "06": 12, "16": 13}, "end": {"01": 15, "02": 7, "05": 4, "15": 3, "07": 5, "08": 6, "03": 10, "11": 9, "04": 14, "06": 12, "16": 13}}, {"line": 11, "op": "05:23", "new": "23", "q1": ["01", "02", "05", "15", "23", "07", "08", "03", "11", "04", "06", "16"], "q2": ["01", "04", "16", "06", "03", "11", "02", "08", "07", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "3026418949592973312"], "05": ["2954361355555045376", "2972375754064527360"], "15": ["2963368554809786368", "2963368554809786368"], "23": ["2967872154437156864", "2967872154437156864"], "07": ["2990390152574009344", "2990390152574009344"], "08": ["3008404551083491328", "3008404551083491328"], "03": ["3170534137668829184", "3242591731706757120"], "11": ["3206562934687793152", "3206562934687793152"], "04": ["3314649325744685056", "3386706919782612992"], "06": ["3350678122763649024", "3350678122763649024"], "16": ["3368692521273131008", "3368692521273131008"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["05", "2954361355555045376"], ["15", "2963368554809786368"], ["23", "2967872154437156864"], [")05", "2972375754064527360"], ["07", "2990390152574009344"], ["08", "3008404551083491328"], [")02", "3026418949592973312"], ["03", "3170534137668829184"], ["11", "3206562934687793152"], [")03", "3242591731706757120"], ["04", "3314649325744685056"], ["06", "3350678122763649024"], ["16", "3368692521273131008"], [")04", "3386706919782612992"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "08": 7, "03": 9, "11": 10, "04": 12, "06": 13, "16": 14}, "end": {"01": 16, "02": 8, "05": 5, "15": 3, "23": 4, "07": 6, "08": 7, "03": 11, "11": 10, "04": 15, "06": 13, "16": 14}}, {"line": 12, "op": "06:10", "new": "10", "q1": ["01", "02", "05", "15", "23", "07", "08", "03", "11", "04", "06", "10", "16"], "q2": ["01", "04", "16", "06", "10", "03", "11", "02", "08", "07", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "3026418949592973312"], "05": ["2954361355555045376", "2972375754064527360"], "15": ["2963368554809786368", "2963368554809786368"], "23": ["2967872154437156864", "2967872154437156864"], "07": ["2990390152574009344", "2990390152574009344"], "08": ["3008404551083491328", "3008404551083491328"], "03": ["3170534137668829184", "3242591731706757120"], "11": ["3206562934687793152", "3206562934687793152"], "04": ["3314649325744685056", "3386706919782612992"], "06": ["3350678122763649024", "3359685322018390016"], "10": ["3355181722391019520", "3355181722391019520"], "16": ["3368692521273131008", "3368692521273131008"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["05", "2954361355555045376"], ["15", "2963368554809786368"], ["23", "2967872154437156864"], [")05", "2972375754064527360"], ["07", "2990390152574009344"], ["08", "3008404551083491328"], [")02", "3026418949592973312"], ["03", "3170534137668829184"], ["11", "3206562934687793152"], [")03", "3242591731706757120"], ["04", "3314649325744685056"], ["06", "3350678122763649024"], ["10", "3355181722391019520"], [")06", "3359685322018390016"], ["16", "3368692521273131008"], [")04", "3386706919782612992"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "08": 7, "03": 9, "11": 10, "04": 12, "06": 13, "10": 14, "16": 16}, "end": {"01": 18, "02": 8, "05": 5, "15": 3, "23": 4, "07": 6, "08": 7, "03": 11, "11": 10, "04": 17, "06": 15, "10": 14, "16": 16}}, {"line": 13, "op": "06:12", "new": "12", "q1": ["01", "02", "05", "15", "23", "07", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "3026418949592973312"], "05": ["2954361355555045376", "2972375754064527360"], "15": ["2963368554809786368", "2963368554809786368"], "23": ["2967872154437156864", "2967872154437156864"], "07": ["2990390152574009344", "2990390152574009344"], "08": ["3008404551083491328", "3008404551083491328"], "03": ["3170534137668829184", "3242591731706757120"], "11": ["3206562934687793152", "3206562934687793152"], "04": ["3314649325744685056", "3386706919782612992"], "06": ["3350678122763649024", "3359685322018390016"], "10": ["3355181722391019520", "3355181722391019520"], "12": ["3357433522204704768", "3357433522204704768"], "16": ["3368692521273131008", "3368692521273131008"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["05", "2954361355555045376"], ["15", "2963368554809786368"], ["23", "2967872154437156864"], [")05", "2972375754064527360"], ["07", "2990390152574009344"], ["08", "3008404551083491328"], [")02", "3026418949592973312"], ["03", "3170534137668829184"], ["11", "3206562934687793152"], [")03", "3242591731706757120"], ["04", "3314649325744685056"], ["06", "3350678122763649024"], ["10", "3355181722391019520"], ["12", "3357433522204704768"], [")06", "3359685322018390016"], ["16", "3368692521273131008"], [")04", "3386706919782612992"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "08": 7, "03": 9, "11": 10, "04": 12, "06": 13, "10": 14, "12": 15, "16": 17}, "end": {"01": 19, "02": 8, "05": 5, "15": 3, "23": 4, "07": 6, "08": 7, "03": 11, "11": 10, "04": 18, "06": 16, "10": 14, "12": 15, "16": 17}}, {"line": 14, "op": "07:09", "new": "09", "q1": ["01", "02", "05", "15", "23", "07", "09", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "09", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "3026418949592973312"], "05": ["2954361355555045376", "2972375754064527360"], "15": ["2963368554809786368", "2963368554809786368"], "23": ["2967872154437156864", "2967872154437156864"], "07": ["2990390152574009344", "2999397351828750336"], "09": ["2994893752201379840", "2994893752201379840"], "08": ["3008404551083491328", "3008404551083491328"], "03": ["3170534137668829184", "3242591731706757120"], "11": ["3206562934687793152", "3206562934687793152"], "04": ["3314649325744685056", "3386706919782612992"], "06": ["3350678122763649024", "3359685322018390016"], "10": ["3355181722391019520", "3355181722391019520"], "12": ["3357433522204704768", "3357433522204704768"], "16": ["3368692521273131008", "3368692521273131008"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["05", "2954361355555045376"], ["15", "2963368554809786368"], ["23", "2967872154437156864"], [")05", "2972375754064527360"], ["07", "2990390152574009344"], ["09", "2994893752201379840"], [")07", "2999397351828750336"], ["08", "3008404551083491328"], [")02", "3026418949592973312"], ["03", "3170534137668829184"], ["11", "3206562934687793152"], [")03", "3242591731706757120"], ["04", "3314649325744685056"], ["06", "3350678122763649024"], ["10", "3355181722391019520"], ["12", "3357433522204704768"], [")06", "3359685322018390016"], ["16", "3368692521273131008"], [")04", "3386706919782612992"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "09": 7, "08": 9, "03": 11, "11": 12, "04": 14, "06": 15, "10": 16, "12": 17, "16": 19}, "end": {"01": 21, "02": 10, "05": 5, "15": 3, "23": 4, "07": 8, "09": 7, "08": 9, "03": 13, "11": 12, "04": 20, "06": 18, "10": 16, "12": 17, "16": 19}}, {"line": 15, "op": "07:14", "new": "14", "q1": ["01", "02", "05", "15", "23", "07", "09", "14", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "14", "09", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "3026418949592973312"], "05": ["2954361355555045376", "2972375754064527360"], "15": ["2963368554809786368", "2963368554809786368"], "23": ["2967872154437156864", "2967872154437156864"], "07": ["2990390152574009344", "2999397351828750336"], "09": ["2994893752201379840", "2994893752201379840"], "14": ["2997145552015065088", "2997145552015065088"], "08": ["3008404551083491328", "3008404551083491328"], "03": ["3170534137668829184", "3242591731706757120"], "11": ["3206562934687793152", "3206562934687793152"], "04": ["3314649325744685056", "3386706919782612992"], "06": ["3350678122763649024", "3359685322018390016"], "10": ["3355181722391019520", "3355181722391019520"], "12": ["3357433522204704768", "3357433522204704768"], "16": ["3368692521273131008", "3368692521273131008"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["05", "2954361355555045376"], ["15", "2963368554809786368"], ["23", "2967872154437156864"], [")05", "2972375754064527360"], ["07", "2990390152574009344"], ["09", "2994893752201379840"], ["14", "2997145552015065088"], [")07", "2999397351828750336"], ["08", "3008404551083491328"], [")02", "3026418949592973312"], ["03", "3170534137668829184"], ["11", "3206562934687793152"], [")03", "3242591731706757120"], ["04", "3314649325744685056"], ["06", "3350678122763649024"], ["10", "3355181722391019520"], ["12", "3357433522204704768"], [")06", "3359685322018390016"], ["16", "3368692521273131008"], [")04", "3386706919782612992"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "09": 7, "14": 8, "08": 10, "03": 12, "11": 13, "04": 15, "06": 16, "10": 17, "12": 18, "16": 20}, "end": {"01": 22, "02": 11, "05": 5, "15": 3, "23": 4, "07": 9, "09": 7, "14": 8, "08": 10, "03": 14, "11": 13, "04": 21, "06": 19, "10": 17, "12": 18, "16": 20}}, {"line": 16, "op": "07:25", "new": "25", "q1": ["01", "02", "05", "15", "23", "07", "09", "14", "25", "08", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "07", "25", "14", "09", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "3026418949592973312"], "05": ["2954361355555045376", "2972375754064527360"], "15": ["2963368554809786368", "2963368554809786368"], "23": ["2967872154437156864", "2967872154437156864"], "07": ["2990390152574009344", "2999397351828750336"], "09": ["2994893752201379840", "2994893752201379840"], "14": ["2997145552015065088", "2997145552015065088"], "25": ["2998271451921907712", "2998271451921907712"], "08": ["3008404551083491328", "3008404551083491328"], "03": ["3170534137668829184", "3242591731706757120"], "11": ["3206562934687793152", "3206562934687793152"], "04": ["3314649325744685056", "3386706919782612992"], "06": ["3350678122763649024", "3359685322018390016"], "10": ["3355181722391019520", "3355181722391019520"], "12": ["3357433522204704768", "3357433522204704768"], "16": ["3368692521273131008", "3368692521273131008"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["05", "2954361355555045376"], ["15", "2963368554809786368"], ["23", "2967872154437156864"], [")05", "2972375754064527360"], ["07", "2990390152574009344"], ["09", "2994893752201379840"], ["14", "2997145552015065088"], ["25", "2998271451921907712"], [")07", "2999397351828750336"], ["08", "3008404551083491328"], [")02", "3026418949592973312"], ["03", "3170534137668829184"], ["11", "3206562934687793152"], [")03", "3242591731706757120"], ["04", "3314649325744685056"], ["06", "3350678122763649024"], ["10", "3355181722391019520"], ["12", "3357433522204704768"], [")06", "3359685322018390016"], ["16", "3368692521273131008"], [")04", "3386706919782612992"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "09": 7, "14": 8, "25": 9, "08": 11, "03": 13, "11": 14, "04": 16, "06": 17, "10": 18, "12": 19, "16": 21}, "end": {"01": 23, "02": 12, "05": 5, "15": 3, "23": 4, "07": 10, "09": 7, "14": 8, "25": 9, "08": 11, "03": 15, "11": 14, "04": 22, "06": 20, "10": 18, "12": 19, "16": 21}}, {"line": 17, "op": "08:13", "new": "13", "q1": ["01", "02", "05", "15", "23", "07", "09", "14", "25", "08", "13", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "13", "07", "25", "14", "09", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "3026418949592973312"], "05": ["2954361355555045376", "2972375754064527360"], "15": ["2963368554809786368", "2963368554809786368"], "23": ["2967872154437156864", "2967872154437156864"], "07": ["2990390152574009344", "2999397351828750336"], "09": ["2994893752201379840", "2994893752201379840"], "14": ["2997145552015065088", "2997145552015065088"], "25": ["2998271451921907712", "2998271451921907712"], "08": ["3008404551083491328", "3017411750338232320"], "13": ["3012908150710861824", "3012908150710861824"], "03": ["3170534137668829184", "3242591731706757120"], "11": ["3206562934687793152", "3206562934687793152"], "04": ["3314649325744685056", "3386706919782612992"], "06": ["3350678122763649024", "3359685322018390016"], "10": ["3355181722391019520", "3355181722391019520"], "12": ["3357433522204704768", "3357433522204704768"], "16": ["3368692521273131008", "3368692521273131008"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["05", "2954361355555045376"], ["15", "2963368554809786368"], ["23", "2967872154437156864"], [")05", "2972375754064527360"], ["07", "2990390152574009344"], ["09", "2994893752201379840"], ["14", "2997145552015065088"], ["25", "2998271451921907712"], [")07", "2999397351828750336"], ["08", "3008404551083491328"], ["13", "3012908150710861824"], [")08", "3017411750338232320"], [")02", "3026418949592973312"], ["03", "3170534137668829184"], ["11", "3206562934687793152"], [")03", "3242591731706757120"], ["04", "3314649325744685056"], ["06", "3350678122763649024"], ["10", "3355181722391019520"], ["12", "3357433522204704768"], [")06", "3359685322018390016"], ["16", "3368692521273131008"], [")04", "3386706919782612992"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "09": 7, "14": 8, "25": 9, "08": 11, "13": 12, "03": 15, "11": 16, "04": 18, "06": 19, "10": 20, "12": 21, "16": 23}, "end": {"01": 25, "02": 14, "05": 5, "15": 3, "23": 4, "07": 10, "09": 7, "14": 8, "25": 9, "08": 13, "13": 12, "03": 17, "11": 16, "04": 24, "06": 22, "10": 20, "12": 21, "16": 23}}, {"line": 18, "op": "09:24", "new": "24", "q1": ["01", "02", "05", "15", "23", "07", "09", "24", "14", "25", "08", "13", "03", "11", "04", "06", "10", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "03", "11", "02", "08", "13", "07", "25", "14", "09", "24", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "3026418949592973312"], "05": ["2954361355555045376", "2972375754064527360"], "15": ["2963368554809786368", "2963368554809786368"], "23": ["2967872154437156864", "2967872154437156864"], "07": ["2990390152574009344", "2999397351828750336"], "09": ["2994893752201379840", "2996019652108222464"], "24": ["2995456702154801152", "2995456702154801152"], "14": ["2997145552015065088", "2997145552015065088"], "25": ["2998271451921907712", "2998271451921907712"], "08": ["3008404551083491328", "3017411750338232320"], "13": ["3012908150710861824", "3012908150710861824"], "03": ["3170534137668829184", "3242591731706757120"], "11": ["3206562934687793152", "3206562934687793152"], "04": ["3314649325744685056", "3386706919782612992"], "06": ["3350678122763649024", "3359685322018390016"], "10": ["3355181722391019520", "3355181722391019520"], "12": ["3357433522204704768", "3357433522204704768"], "16": ["3368692521273131008", "3368692521273131008"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["05", "2954361355555045376"], ["15", "2963368554809786368"], ["23", "2967872154437156864"], [")05", "2972375754064527360"], ["07", "2990390152574009344"], ["09", "2994893752201379840"], ["24", "2995456702154801152"], [")09", "2996019652108222464"], ["14", "2997145552015065088"], ["25", "2998271451921907712"], [")07", "2999397351828750336"], ["08", "3008404551083491328"], ["13", "3012908150710861824"], [")08", "3017411750338232320"], [")02", "3026418949592973312"], ["03", "3170534137668829184"], ["11", "3206562934687793152"], [")03", "3242591731706757120"], ["04", "3314649325744685056"], ["06", "3350678122763649024"], ["10", "3355181722391019520"], ["12", "3357433522204704768"], [")06", "3359685322018390016"], ["16", "3368692521273131008"], [")04", "3386706919782612992"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "09": 7, "24": 8, "14": 10, "25": 11, "08": 13, "13": 14, "03": 17, "11": 18, "04": 20, "06": 21, "10": 22, "12": 23, "16": 25}, "end": {"01": 27, "02": 16, "05": 5, "15": 3, "23": 4, "07": 12, "09": 9, "24": 8, "14": 10, "25": 11, "08": 15, "13": 14, "03": 19, "11": 18, "04": 26, "06": 24, "10": 22, "12": 23, "16": 25}}, {"line": 19, "op": "10:22", "new": "22", "q1": ["01", "02", "05", "15", "23", "07", "09", "24", "14", "25", "08", "13", "03", "11", "04", "06", "10", "22", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "22", "03", "11", "02", "08", "13", "07", "25", "14", "09", "24", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "3026418949592973312"], "05": ["2954361355555045376", "2972375754064527360"], "15": ["2963368554809786368", "2963368554809786368"], "23": ["2967872154437156864", "2967872154437156864"], "07": ["2990390152574009344", "2999397351828750336"], "09": ["2994893752201379840", "2996019652108222464"], "24": ["2995456702154801152", "2995456702154801152"], "14": ["2997145552015065088", "2997145552015065088"], "25": ["2998271451921907712", "2998271451921907712"], "08": ["3008404551083491328", "3017411750338232320"], "13": ["3012908150710861824", "3012908150710861824"], "03": ["3170534137668829184", "3242591731706757120"], "11": ["3206562934687793152", "3206562934687793152"], "04": ["3314649325744685056", "3386706919782612992"], "06": ["3350678122763649024", "3359685322018390016"], "10": ["3355181722391019520", "3356307622297862144"], "22": ["3355744672344440832", "3355744672344440832"], "12": ["3357433522204704768", "3357433522204704768"], "16": ["3368692521273131008", "3368692521273131008"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["05", "2954361355555045376"], ["15", "2963368554809786368"], ["23", "2967872154437156864"], [")05", "2972375754064527360"], ["07", "2990390152574009344"], ["09", "2994893752201379840"], ["24", "2995456702154801152"], [")09", "2996019652108222464"], ["14", "2997145552015065088"], ["25", "2998271451921907712"], [")07", "2999397351828750336"], ["08", "3008404551083491328"], ["13", "3012908150710861824"], [")08", "3017411750338232320"], [")02", "3026418949592973312"], ["03", "3170534137668829184"], ["11", "3206562934687793152"], [")03", "3242591731706757120"], ["04", "3314649325744685056"], ["06", "3350678122763649024"], ["10", "3355181722391019520"], ["22", "3355744672344440832"], [")10", "3356307622297862144"], ["12", "3357433522204704768"], [")06", "3359685322018390016"], ["16", "3368692521273131008"], [")04", "3386706919782612992"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "09": 7, "24": 8, "14": 10, "25": 11, "08": 13, "13": 14, "03": 17, "11": 18, "04": 20, "06": 21, "10": 22, "22": 23, "12": 25, "16": 27}, "end": {"01": 29, "02": 16, "05": 5, "15": 3, "23": 4, "07": 12, "09": 9, "24": 8, "14": 10, "25": 11, "08": 15, "13": 14, "03": 19, "11": 18, "04": 28, "06": 26, "10": 24, "22": 23, "12": 25, "16": 27}}], "final": {"q1": ["01", "02", "05", "15", "23", "07", "09", "24", "14", "25", "08", "13", "03", "11", "04", "06", "10", "22", "12", "16"], "q2": ["01", "04", "16", "06", "12", "10", "22", "03", "11", "02", "08", "13", "07", "25", "14", "09", "24", "05", "23", "15"], "pos": {"01": ["2305843009213693952", "3458764513820540928"], "02": ["2882303761517117440", "3026418949592973312"], "05": ["2954361355555045376", "2972375754064527360"], "15": ["2963368554809786368", "2963368554809786368"], "23": ["2967872154437156864", "2967872154437156864"], "07": ["2990390152574009344", "2999397351828750336"], "09": ["2994893752201379840", "2996019652108222464"], "24": ["2995456702154801152", "2995456702154801152"], "14": ["2997145552015065088", "2997145552015065088"], "25": ["2998271451921907712", "2998271451921907712"], "08": ["3008404551083491328", "3017411750338232320"], "13": ["3012908150710861824", "3012908150710861824"], "03": ["3170534137668829184", "3242591731706757120"], "11": ["3206562934687793152", "3206562934687793152"], "04": ["3314649325744685056", "3386706919782612992"], "06": ["3350678122763649024", "3359685322018390016"], "10": ["3355181722391019520", "3356307622297862144"], "22": ["3355744672344440832", "3355744672344440832"], "12": ["3357433522204704768", "3357433522204704768"], "16": ["3368692521273131008", "3368692521273131008"]}, "cells": [["01", "2305843009213693952"], ["02", "2882303761517117440"], ["05", "2954361355555045376"], ["15", "2963368554809786368"], ["23", "2967872154437156864"], [")05", "2972375754064527360"], ["07", "2990390152574009344"], ["09", "2994893752201379840"], ["24", "2995456702154801152"], [")09", "2996019652108222464"], ["14", "2997145552015065088"], ["25", "2998271451921907712"], [")07", "2999397351828750336"], ["08", "3008404551083491328"], ["13", "3012908150710861824"], [")08", "3017411750338232320"], [")02", "3026418949592973312"], ["03", "3170534137668829184"], ["11", "3206562934687793152"], [")03", "3242591731706757120"], ["04", "3314649325744685056"], ["06", "3350678122763649024"], ["10", "3355181722391019520"], ["22", "3355744672344440832"], [")10", "3356307622297862144"], ["12", "3357433522204704768"], [")06", "3359685322018390016"], ["16", "3368692521273131008"], [")04", "3386706919782612992"], [")01", "3458764513820540928"]], "open": {"01": 0, "02": 1, "05": 2, "15": 3, "23": 4, "07": 6, "09": 7, "24": 8, "14": 10, "25": 11, "08": 13, "13": 14, "03": 17, "11": 18, "04": 20, "06": 21, "10": 22, "22": 23, "12": 25, "16": 27}, "end": {"01": 29, "02": 16, "05": 5, "15": 3, "23": 4, "07": 12, "09": 9, "24": 8, "14": 10, "25": 11, "08": 15, "13": 14, "03": 19, "11": 18, "04": 28, "06": 26, "10": 24, "22": 23, "12": 25, "16": 27}}, "stepwise": true, "limit": 300, "renumber": [0], "errors": []}}};
 
 // ---- small helpers --------------------------------------------------------------------
 const $ = (s) => document.querySelector(s);
@@ -1698,7 +1890,29 @@ const FONT = 'Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif';
 
 // ---- state ----------------------------------------------------------------------------
 const state = { data: null, step: 0, sel: [], collapsed: new Set(), mode: "pick", timer: null, example: null, lists: "sorted", from: null };
-let backend = null;   // { encode(text) -> Promise<data>, label }
+let backend = null;   // { encode(text, opts) -> Promise<data>, label }; opts = { kind, positions }
+const isEuler = () => !!state.data && state.data.kind === "euler";   // what the shown data is, not what is selected
+const options = () => ({ kind: $("#kind").value, positions: $("#positions").value });
+
+// texts that depend on the encoding (DTree: two lists; EulerTree: one list) and the kind of position
+const TEXT = {
+  dtree: {
+    howto: `<p style="margin:0 0 8px">Every node gets a position in two lists. <b>Q1</b> lists the tree top-down with siblings in their order, <b>Q2</b> with siblings reversed. A node <i>u</i> reaches <i>v</i> exactly when <i>u</i> comes before <i>v</i> in both lists.</p>
+      <p style="margin:0 0 8px">A new node needs two list insertions; the other positions stay as they are. Step through the build with the slider and watch it happen, edge by edge.</p>`,
+    plane: "each node at (its rank in Q1, its rank in Q2)",
+    title: "Q1 and Q2", chip: "Q1 / Q2", own: "Each in its own order", row2: "Q2",
+    sorted: "nodes in Q1 order: Q1 rises by one; Q2 rises into a child and drops where a new block begins (marked)",
+  },
+  euler: {
+    howto: `<p style="margin:0 0 8px"><b>EulerTree</b> keeps one list, <b>Q1</b>: the tree top-down with siblings in their order, and after the last node of each subtree a closing cell <b>)</b> for its root. A node's block runs from its own cell to its closing cell (a leaf's block is its own cell). A node <i>u</i> reaches <i>v</i> exactly when <i>v</i>'s cell lies inside <i>u</i>'s block.</p>
+      <p style="margin:0 0 8px">A new node needs one list insertion, two when a leaf gets its first child (its closing cell); the other positions stay as they are. Read from the right, the block ends come in DTree's Q2 order, so the plane is the same as with DTree.</p>`,
+    plane: "each node at (its rank in Q1, the rank of its block end from the right = its Q2 rank)",
+    title: "Q1, the Euler tour", chip: "Q1", own: "The list as stored", row2: "end",
+    sorted: "nodes in Q1 order with the rank of their block end read from the right (= Q2): it rises into a child and drops where a new block begins (marked)",
+  },
+  rational: "Positions are fractions: a new cell takes the mediant of its neighbors, and a list is renumbered only when a denominator would grow too large.",
+  integer: "Positions are integers in [0, 2^62]: a new cell takes the midpoint of its neighbors, and a list is renumbered when two neighbors leave no room.",
+};
 
 function current() {
   const d = state.data;
@@ -1814,7 +2028,8 @@ function planeSVG(C) {
     g += `<text x="${L - 8}" y="${Y(i) + 3.5}" text-anchor="end" font-family="${FONT}" font-size="10" fill="${COLORS.muted}">${i + 1}</text>`;
   }
   g += `<text x="${L + (n * cell) / 2}" y="18" text-anchor="middle" font-family="${FONT}" font-size="12" fill="${COLORS.ink}">rank in Q1 &#8594;</text>`;
-  g += `<text transform="translate(16 ${T + (n * cell) / 2}) rotate(90)" text-anchor="middle" font-family="${FONT}" font-size="12" fill="${COLORS.ink}">rank in Q2 &#8594;</text>`;   // turned clockwise: reads downward, the arrow points down
+  const yName = isEuler() ? "rank of the block end, from the right (= Q2)" : "rank in Q2";
+  g += `<text transform="translate(16 ${T + (n * cell) / 2}) rotate(90)" text-anchor="middle" font-family="${FONT}" font-size="12" fill="${COLORS.ink}">${yName} &#8594;</text>`;   // turned clockwise: reads downward, the arrow points down
   const a = state.sel[0];
   if (a != null && C.r1.has(a)) {
     const ax = X(C.r1.get(a)), ay = Y(C.r2.get(a));
@@ -1833,48 +2048,62 @@ function planeSVG(C) {
     const st = STYLE[role(C, v)], x = X(C.r1.get(v)), y = Y(C.r2.get(v));
     const r = Math.max(4, Math.min(8, cell / 3));
     const op = visible.has(v) ? 1 : 0.35;
-    g += `<g data-node="${esc(v)}" style="cursor:pointer" opacity="${op}"><title>${esc(v)}: Q1 rank ${C.r1.get(v) + 1}, Q2 rank ${C.r2.get(v) + 1}</title>`;
+    g += `<g data-node="${esc(v)}" style="cursor:pointer" opacity="${op}"><title>${esc(v)}: Q1 rank ${C.r1.get(v) + 1}, ${isEuler() ? "end rank (= Q2)" : "Q2 rank"} ${C.r2.get(v) + 1}</title>`;
     g += `<circle cx="${x}" cy="${y}" r="${r + 4}" fill="transparent"/>`;
     g += `<circle cx="${x}" cy="${y}" r="${r}" fill="${st.fill === COLORS.paper ? COLORS.ink : st.fill}" stroke="${st.stroke}" stroke-width="${st.w}"/>`;
     if (labels) g += `<text x="${x + r + 4}" y="${y + 4}" font-family="${FONT}" font-size="11" fill="${COLORS.ink}" stroke="${COLORS.paper}" stroke-width="3" paint-order="stroke">${esc(v)}</text>`;
     g += `</g>`;
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Plane: rank in Q1 against rank in Q2">${g}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Plane: rank in Q1 against ${yName}">${g}</svg>`;
 }
 
 // ---- lists ----------------------------------------------------------------------------
 // "Sorted by Q1": one column per node in Q1 order. Q1 rises by one from column to column;
 // Q2 rises from a node to the next exactly when the next is its child, and drops where a
 // new block begins (marked). The line joins the plane's points in Q1 order.
-const COL = 52, HEAD = 38;   // column pitch (48 px cell + 4 px gap); row name + gap
+const HEAD = 38;   // row name + gap
+// integer positions run to 19 digits: the grid shows five significant ones (the cell's title has all)
+const shortPos = (p) => p.length > 7 && /^\d+$/.test(p) ? `${p[0]}.${p.slice(1, 5)}e${p.length - 1}` : p;
 function listsHTML(C) {
   const { visible } = visibility(C);
   const cls = (v) => [role(C, v), visible.has(v) ? "" : "hid"].join(" ").trim();
+  if (state.lists === "own" && isEuler()) {     // the one list with its closing cells; a closing cell picks its node
+    const cells = C.s.cells.map(([name, p], i) => {
+      const open = C.s.open[name] === i, v = open ? name : name.slice(1);
+      const t = open ? `${esc(v)} at position ${esc(p)}` : `end of ${esc(v)}'s block at position ${esc(p)}`;
+      return `<span class="cell ${cls(v)}${open ? "" : " close"}" data-node="${esc(v)}" title="${t}">${open ? "" : "<b>)</b>"}${esc(v)}<small>${esc(p)}</small></span>`;
+    });
+    return `<div class="qrow"><span class="qname">Q1</span>${cells.join("")}</div>`;
+  }
   if (state.lists === "own") {
     const row = (name, list, k) => `<div class="qrow"><span class="qname">${name}</span>` +
       list.map((v) => `<span class="cell ${cls(v)}" data-node="${esc(v)}" title="${esc(v)} at position ${esc(C.s.pos[v][k])}">${esc(v)}<small>${esc(C.s.pos[v][k])}</small></span>`).join("") + `</div>`;
     return row("Q1", C.s.q1, 0) + row("Q2", C.s.q2, 1);
   }
   const q1 = C.s.q1, n = q1.length;
+  const wide = state.data.positions === "integer", COL = wide ? 76 : 52;   // column pitch: cell + 4 px gap
   const drop = (i) => i > 0 && C.r2.get(q1[i]) < C.r2.get(q1[i - 1]);
-  const title = (v) => `${esc(v)}: Q1 rank ${C.r1.get(v) + 1}, Q2 rank ${C.r2.get(v) + 1}; positions ${esc(C.s.pos[v][0])} and ${esc(C.s.pos[v][1])}`;
+  const r2 = TEXT[isEuler() ? "euler" : "dtree"].row2;
+  const title = (v) => isEuler()
+    ? `${esc(v)}: Q1 rank ${C.r1.get(v) + 1}, block end rank ${C.r2.get(v) + 1} from the right (= Q2); positions ${esc(C.s.pos[v][0])} (own cell) and ${esc(C.s.pos[v][1])} (block end)`
+    : `${esc(v)}: Q1 rank ${C.r1.get(v) + 1}, Q2 rank ${C.r2.get(v) + 1}; positions ${esc(C.s.pos[v][0])} and ${esc(C.s.pos[v][1])}`;
   const cell = (v, i, k) => {
     const top = k == null ? esc(v) : String((k === 0 ? C.r1.get(v) : C.r2.get(v)) + 1);
-    const sub = k == null ? "&nbsp;" : esc(C.s.pos[v][k]);
+    const sub = k == null ? "&nbsp;" : esc(shortPos(C.s.pos[v][k]));
     return `<span class="cell ${cls(v)}${drop(i) ? " blk" : ""}" data-node="${esc(v)}" title="${title(v)}">${top}<small>${sub}</small></span>`;
   };
   const row = (name, k) => `<div class="qrow"><span class="qname">${name}</span>` + q1.map((v, i) => cell(v, i, k)).join("") + `</div>`;
-  const H = 64, x = (i) => HEAD + i * COL + 24;
+  const H = 64, x = (i) => HEAD + i * COL + (COL - 4) / 2;
   const y = (v) => 8 + (n > 1 ? C.r2.get(v) / (n - 1) : 0) * (H - 16);
-  let svg = `<svg width="${HEAD + n * COL}" height="${H}" role="img" aria-label="Q2 rank of each node, in Q1 order">`;
+  let svg = `<svg width="${HEAD + n * COL}" height="${H}" role="img" aria-label="${r2} rank of each node, in Q1 order">`;
   for (let i = 1; i < n; i++) {
     const d = drop(i);
     svg += `<line x1="${x(i - 1)}" y1="${y(q1[i - 1])}" x2="${x(i)}" y2="${y(q1[i])}" stroke="${d ? COLORS.accent : COLORS.ink}" stroke-width="1.5"${d ? ' stroke-dasharray="4 3"' : ""}/>`;
   }
   q1.forEach((v, i) => { svg += `<g data-node="${esc(v)}" style="cursor:pointer"><circle cx="${x(i)}" cy="${y(v)}" r="4" fill="${drop(i) ? COLORS.accent : COLORS.ink}"/></g>`; });
-  svg += `<text x="0" y="12" font-size="11" fill="${COLORS.muted}" font-family="${FONT}">Q2</text>`;
+  svg += `<text x="0" y="12" font-size="11" fill="${COLORS.muted}" font-family="${FONT}">${r2}</text>`;
   svg += `<text x="0" y="${H - 4}" font-size="10" fill="${COLORS.muted}" font-family="${FONT}">rank &#8595;</text></svg>`;
-  return `<div class="qgrid">${row("", null)}${row("Q1", 0)}${row("Q2", 1)}${svg}</div>`;
+  return `<div class="qgrid${wide ? " wide" : ""}">${row("", null)}${row("Q1", 0)}${row(r2, 1)}${svg}</div>`;
 }
 
 // ---- query panel ----------------------------------------------------------------------
@@ -1889,7 +2118,17 @@ function queryHTML(C) {
   if (b == null) {
     let anc = 0, desc = 0;
     for (const v of C.s.q1) { if (v !== a) { if (reaches(C, v, a)) anc++; else if (reaches(C, a, v)) desc++; } }
+    if (isEuler()) {
+      const o = C.s.open[a] + 1, e = C.s.end[a] + 1;
+      const blk = o === e ? `Its block is its own cell (place ${o} of the list): a leaf.` : `Its block runs from place ${o} to place ${e} of the list; the nodes it reaches lie inside.`;
+      return `${nm(a)}: reached by ${anc} node${anc === 1 ? "" : "s"}, reaches ${desc}. ${blk} In the plane, the nodes that reach it lie upper left, the nodes it reaches lower right.`;
+    }
     return `${nm(a)}: reached by ${anc} node${anc === 1 ? "" : "s"}, reaches ${desc}. Q1 rank ${C.r1.get(a) + 1}, Q2 rank ${C.r2.get(a) + 1}. In the plane, the nodes that reach it lie upper left, the nodes it reaches lower right.`;
+  }
+  if (isEuler()) {
+    const o = C.s.open[a], e = C.s.end[a], p = C.s.open[b];
+    const yes = o < p && p < e;
+    return `Does ${nm(a)} reach ${nm(b)}? <span class="answer ${yes ? "yes" : "no"}">${yes ? "Yes" : "No"}</span> &middot; ${nm(a)}'s block: places ${o + 1} to ${e + 1} of the list &middot; ${nm(b)} at place ${p + 1} ${yes ? "(inside &#10003;)" : "(outside &#10007;)"}`;
   }
   const i1 = C.r1.get(a), j1 = C.r1.get(b), i2 = C.r2.get(a), j2 = C.r2.get(b);
   const yes = i1 < j1 && i2 < j2;
@@ -1949,6 +2188,13 @@ function render() {
   const d = state.data;
   const C = current();
   const total = d ? d.steps.length : 0;
+  const tk = TEXT[d && d.kind === "euler" ? "euler" : "dtree"];
+  $("#howto").innerHTML = tk.howto;
+  $("#howto-pos").textContent = TEXT[d && d.positions === "integer" ? "integer" : "rational"];
+  $("#plane-note").textContent = tk.plane;
+  $("#lists-title").textContent = tk.title;
+  $("#v-lists-label").textContent = tk.chip;
+  $("#l-own").textContent = tk.own;
   const slider = $("#step");
   slider.max = Math.max(0, total - 1);
   slider.value = state.step;
@@ -1966,13 +2212,17 @@ function render() {
   $("#steplabel").innerHTML = d.stepwise
     ? `Edge ${state.step + 1} of ${total}: <b>${edgeText(si.op)}</b> <span style="color:var(--muted)">(line ${si.line})</span> &middot; ${C.s.q1.length} nodes`
     : `Final tree: ${C.s.q1.length} nodes. Step by step is available up to ${d.limit} insertions.`;
-  $("#stats").textContent = `${d.final.q1.length} nodes · renumberings Q1 / Q2: ${d.renumber[0]} / ${d.renumber[1]}`;
+  $("#stats").textContent = isEuler()
+    ? `${d.final.q1.length} nodes · ${d.positions} positions · renumberings Q1: ${d.renumber[0]}`
+    : `${d.final.q1.length} nodes · ${d.positions} positions · renumberings Q1 / Q2: ${d.renumber[0]} / ${d.renumber[1]}`;
   if ($("#v-tree").checked) $("#tree").innerHTML = treeSVG(C);
   if ($("#v-plane").checked) $("#plane").innerHTML = planeSVG(C);
   if ($("#v-lists").checked) $("#lists").innerHTML = listsHTML(C);
-  $("#lists-note").textContent = state.lists === "sorted"
-    ? "nodes in Q1 order: Q1 rises by one; Q2 rises into a child and drops where a new block begins (marked)"
-    : "positions as the library stores them (fractions; a new node takes the mediant of its neighbors)";
+  const tx = TEXT[d.kind];
+  const stored = d.positions === "integer" ? "integers; a new cell takes the midpoint of its neighbors" : "fractions; a new cell takes the mediant of its neighbors";
+  $("#lists-note").textContent = state.lists === "sorted" ? tx.sorted
+    : d.kind === "euler" ? `the one list as the library stores it, with a closing cell ) for every node with children (${stored})`
+    : `positions as the library stores them (${stored})`;
   $("#p-tree").hidden = !$("#v-tree").checked;
   $("#p-plane").hidden = !$("#v-plane").checked;
   $("#p-lists").hidden = !$("#v-lists").checked;
@@ -2059,6 +2309,15 @@ function wire() {
     track("encode_text");
     runEncode();
   });
+  for (const id of ["kind", "positions"]) {
+    const el = $("#" + id), saved = store.get("dtree-" + id);
+    if (saved && [...el.options].some((o) => o.value === saved)) el.value = saved;
+    el.addEventListener("change", () => {
+      store.set("dtree-" + id, el.value);
+      track("encoding", options());
+      runEncode();
+    });
+  }
   $("#text").addEventListener("keydown", (ev) => { if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter") runEncode(); });
   $("#step").addEventListener("input", (ev) => { stopPlay(); goStep(+ev.target.value); });
   document.addEventListener("keydown", (ev) => {      // arrow keys step edge by edge, except while typing
@@ -2147,10 +2406,14 @@ function setStatus(kind, text) {
   $("#statustext").innerHTML = text;
 }
 
+// the default example, computed in advance for every encoding and kind of position
+const precomputed = () => $("#text").value === EXAMPLES[DEFAULT.example] ? DEFAULT.data[`${$("#kind").value} ${$("#positions").value}`] : null;
+
 async function runEncode() {
+  if (!backend && precomputed()) { setData(precomputed()); return; }
   if (!backend) { setStatus("", "The Python runtime is still loading; the tree is computed as soon as it is ready."); return; }
   try {
-    const data = await backend.encode($("#text").value);
+    const data = await backend.encode($("#text").value, options());
     setData(data);
   } catch (e) {
     setStatus("error", "Could not encode: " + esc(e.message || e));
@@ -2175,8 +2438,9 @@ async function startLocal() {
     return {
       label: `triordinal-dtree ${info.dtree} (installed) on Python ${info.python}, local`,
       local: true,
-      encode: async (text) => {
-        const res = await fetch("api/encode", { method: "POST", headers: { "Content-Type": "text/plain; charset=utf-8" }, body: text });
+      encode: async (text, opts) => {
+        const q = new URLSearchParams(opts).toString();
+        const res = await fetch("api/encode?" + q, { method: "POST", headers: { "Content-Type": "text/plain; charset=utf-8" }, body: text });
         if (!res.ok) throw new Error("local server answered " + res.status);
         return res.json();
       },
@@ -2202,6 +2466,7 @@ async function startPyodide() {
     py.FS.writeFile("/home/pyodide/triordinal/dlist/__init__.py", $("#src-dlist").textContent);
     py.FS.writeFile("/home/pyodide/triordinal/dtree/__init__.py", $("#src-init").textContent);
     py.FS.writeFile("/home/pyodide/triordinal/dtree/core.py", $("#src-dtree").textContent);
+    py.FS.writeFile("/home/pyodide/triordinal/dtree/euler.py", $("#src-euler").textContent);
   }
   py.FS.writeFile("/home/pyodide/explorer_bridge.py", $("#src-bridge").textContent);
   py.runPython('import sys\nif "/home/pyodide" not in sys.path: sys.path.insert(0, "/home/pyodide")');
@@ -2209,7 +2474,7 @@ async function startPyodide() {
   const version = py.runPython("import triordinal.dtree\ntriordinal.dtree.__version__");
   return {
     label: `triordinal-dtree ${version} (${source}) on Pyodide ${py.version}`,
-    encode: async (text) => JSON.parse(encode(text)),
+    encode: async (text, opts) => JSON.parse(encode(text, 300, opts.kind, opts.positions)),
   };
 }
 
@@ -2217,7 +2482,7 @@ async function boot() {
   wire();
   $("#text").value = EXAMPLES[DEFAULT.example];
   state.example = DEFAULT.example;
-  setData(DEFAULT.data);
+  setData(precomputed() || DEFAULT.data["dtree rational"]);
   try {
     backend = window.EXPLORER_BACKEND || await startLocal() || await startPyodide();
     $("#encode").disabled = false;

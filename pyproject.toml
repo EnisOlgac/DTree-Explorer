@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "dtree-explorer"
 dynamic = ["version"]
-description = "DTree Explorer: encode a directed tree with DTree's two projections (Q1, Q2) and watch it step by step, in the browser"
+description = "DTree Explorer: encode a directed tree with DTree's two projections (Q1, Q2) or EulerTree's one list and watch it step by step, in the browser"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Enis Olgac", email = "enis@digraphs.info" }]
-dependencies = ["triordinal-dtree>=2.1.0"]
+dependencies = ["triordinal-dtree>=2.2.0"]
 keywords = ["directed tree", "tree topology", "reachability", "visualization", "incremental encoding", "teaching"]
 classifiers = [
   "Development Status :: 4 - Beta",

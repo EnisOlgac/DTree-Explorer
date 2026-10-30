@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DTree Explorer</title>
-<meta name="description" content="Encode a directed tree with DTree's two projections Q1 and Q2, step by step, in your browser.">
+<meta name="description" content="Encode a directed tree with DTree's two lists Q1 and Q2, or with EulerTree's one list, step by step, in your browser.">
 <style>
 /* Layout: a peach band as on digraphs.blog, then input on the left and the pictures on the right;
    one column on phones. One light look on purpose, matching the site. */
@@ -101,8 +101,13 @@ button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-
 .cell.sel1 small, .cell.sel2 small { color: #fff; }
 .cell.sel2 { background: var(--ink); border-color: var(--ink); color: #fff; }
 .cell.hid { opacity: 0.4; }
+.cell.close { border-style: dashed; }
+.cell.close b { font-weight: 400; color: var(--muted); }
+.cell.sel1 b, .cell.sel2 b { color: #fff; }
+.opts { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
 .qgrid .qrow { gap: 4px; margin: 2px 0 6px; }
 .qgrid .cell { width: 48px; min-width: 0; box-sizing: border-box; padding: 3px 2px; }
+.qgrid.wide .cell { width: 72px; }
 .qgrid .cell.blk { box-shadow: -3px 0 0 var(--accent); }
 .qgrid svg { display: block; }
 .stats { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -136,6 +141,12 @@ footer.band a { color: var(--ink); }
       <input id="file" type="file" accept=".csx,.txt,text/plain">
       <label class="field" for="text">Edges, one line each</label>
       <textarea id="text" spellcheck="false"></textarea>
+      <div class="opts">
+        <div><label class="field" for="kind">Encoding</label>
+          <select id="kind"><option value="dtree">DTree (Q1, Q2)</option><option value="euler">EulerTree (Q1)</option></select></div>
+        <div><label class="field" for="positions">Positions</label>
+          <select id="positions"><option value="rational">rational</option><option value="integer">integer</option></select></div>
+      </div>
       <div class="row" style="margin-top:10px">
         <button id="encode" class="primary" type="button" disabled>Encode</button>
         <span class="stats" id="stats"></span>
@@ -148,8 +159,8 @@ footer.band a { color: var(--ink); }
     </div>
     <div class="card">
       <h2>How to read it</h2>
-      <p style="margin:0 0 8px">Every node gets a position in two lists. <b>Q1</b> lists the tree top-down with siblings in their order, <b>Q2</b> with siblings reversed. A node <i>u</i> reaches <i>v</i> exactly when <i>u</i> comes before <i>v</i> in both lists.</p>
-      <p style="margin:0 0 8px">A new node needs two list insertions; the other positions stay as they are. Step through the build with the slider and watch it happen, edge by edge.</p>
+      <div id="howto"></div>
+      <p style="margin:0 0 8px" id="howto-pos"></p>
       <p style="margin:0;font-size:13px;color:var(--muted)">The method is described in E. Olgac, <a href="https://doi.org/10.5772/intechopen.1013408">&ldquo;Topology and Structure of Directed Trees: An Incremental Encoding&rdquo;</a>.</p>
     </div>
   </aside>
@@ -172,7 +183,7 @@ footer.band a { color: var(--ink); }
         <div class="chips" role="group" aria-label="Views">
           <label class="chip"><input type="checkbox" id="v-tree" checked> Tree</label>
           <label class="chip"><input type="checkbox" id="v-plane" checked> Plane</label>
-          <label class="chip"><input type="checkbox" id="v-lists" checked> Q1 / Q2</label>
+          <label class="chip"><input type="checkbox" id="v-lists" checked> <span id="v-lists-label">Q1 / Q2</span></label>
         </div>
         <div class="seg" role="group" aria-label="Clicking a node">
           <button type="button" id="m-pick" aria-pressed="true">Pick nodes</button>
@@ -201,7 +212,7 @@ footer.band a { color: var(--ink); }
     <div class="card" id="p-plane">
       <div class="panel-head">
         <h2>Plane</h2>
-        <span class="note">each node at (its rank in Q1, its rank in Q2)</span>
+        <span class="note" id="plane-note"></span>
         <div class="row"><button type="button" data-save="plane" data-fmt="svg">Save SVG</button><button type="button" data-save="plane" data-fmt="png">Save PNG</button></div>
       </div>
       <div class="scroll" id="plane"></div>
@@ -209,7 +220,7 @@ footer.band a { color: var(--ink); }
 
     <div class="card" id="p-lists">
       <div class="panel-head">
-        <h2>Q1 and Q2</h2>
+        <h2 id="lists-title">Q1 and Q2</h2>
         <span class="note" id="lists-note"></span>
         <div class="seg" role="group" aria-label="Order of the lists">
           <button type="button" id="l-sorted" aria-pressed="true">Sorted by Q1</button>
@@ -235,6 +246,7 @@ footer.band a { color: var(--ink); }
 <script type="text/plain" id="src-dlist">__DLIST_SRC__</script>
 <script type="text/plain" id="src-init">__DTREE_INIT__</script>
 <script type="text/plain" id="src-dtree">__DTREE_SRC__</script>
+<script type="text/plain" id="src-euler">__DTREE_EULER__</script>
 <script type="text/plain" id="src-bridge">__BRIDGE_SRC__</script>
 <script>
 "use strict";
@@ -264,7 +276,29 @@ const FONT = 'Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif';
 
 // ---- state ----------------------------------------------------------------------------
 const state = { data: null, step: 0, sel: [], collapsed: new Set(), mode: "pick", timer: null, example: null, lists: "sorted", from: null };
-let backend = null;   // { encode(text) -> Promise<data>, label }
+let backend = null;   // { encode(text, opts) -> Promise<data>, label }; opts = { kind, positions }
+const isEuler = () => !!state.data && state.data.kind === "euler";   // what the shown data is, not what is selected
+const options = () => ({ kind: $("#kind").value, positions: $("#positions").value });
+
+// texts that depend on the encoding (DTree: two lists; EulerTree: one list) and the kind of position
+const TEXT = {
+  dtree: {
+    howto: `<p style="margin:0 0 8px">Every node gets a position in two lists. <b>Q1</b> lists the tree top-down with siblings in their order, <b>Q2</b> with siblings reversed. A node <i>u</i> reaches <i>v</i> exactly when <i>u</i> comes before <i>v</i> in both lists.</p>
+      <p style="margin:0 0 8px">A new node needs two list insertions; the other positions stay as they are. Step through the build with the slider and watch it happen, edge by edge.</p>`,
+    plane: "each node at (its rank in Q1, its rank in Q2)",
+    title: "Q1 and Q2", chip: "Q1 / Q2", own: "Each in its own order", row2: "Q2",
+    sorted: "nodes in Q1 order: Q1 rises by one; Q2 rises into a child and drops where a new block begins (marked)",
+  },
+  euler: {
+    howto: `<p style="margin:0 0 8px"><b>EulerTree</b> keeps one list, <b>Q1</b>: the tree top-down with siblings in their order, and after the last node of each subtree a closing cell <b>)</b> for its root. A node's block runs from its own cell to its closing cell (a leaf's block is its own cell). A node <i>u</i> reaches <i>v</i> exactly when <i>v</i>'s cell lies inside <i>u</i>'s block.</p>
+      <p style="margin:0 0 8px">A new node needs one list insertion, two when a leaf gets its first child (its closing cell); the other positions stay as they are. Read from the right, the block ends come in DTree's Q2 order, so the plane is the same as with DTree.</p>`,
+    plane: "each node at (its rank in Q1, the rank of its block end from the right = its Q2 rank)",
+    title: "Q1, the Euler tour", chip: "Q1", own: "The list as stored", row2: "end",
+    sorted: "nodes in Q1 order with the rank of their block end read from the right (= Q2): it rises into a child and drops where a new block begins (marked)",
+  },
+  rational: "Positions are fractions: a new cell takes the mediant of its neighbors, and a list is renumbered only when a denominator would grow too large.",
+  integer: "Positions are integers in [0, 2^62]: a new cell takes the midpoint of its neighbors, and a list is renumbered when two neighbors leave no room.",
+};
 
 function current() {
   const d = state.data;
@@ -380,7 +414,8 @@ function planeSVG(C) {
     g += `<text x="${L - 8}" y="${Y(i) + 3.5}" text-anchor="end" font-family="${FONT}" font-size="10" fill="${COLORS.muted}">${i + 1}</text>`;
   }
   g += `<text x="${L + (n * cell) / 2}" y="18" text-anchor="middle" font-family="${FONT}" font-size="12" fill="${COLORS.ink}">rank in Q1 &#8594;</text>`;
-  g += `<text transform="translate(16 ${T + (n * cell) / 2}) rotate(90)" text-anchor="middle" font-family="${FONT}" font-size="12" fill="${COLORS.ink}">rank in Q2 &#8594;</text>`;   // turned clockwise: reads downward, the arrow points down
+  const yName = isEuler() ? "rank of the block end, from the right (= Q2)" : "rank in Q2";
+  g += `<text transform="translate(16 ${T + (n * cell) / 2}) rotate(90)" text-anchor="middle" font-family="${FONT}" font-size="12" fill="${COLORS.ink}">${yName} &#8594;</text>`;   // turned clockwise: reads downward, the arrow points down
   const a = state.sel[0];
   if (a != null && C.r1.has(a)) {
     const ax = X(C.r1.get(a)), ay = Y(C.r2.get(a));
@@ -399,48 +434,62 @@ function planeSVG(C) {
     const st = STYLE[role(C, v)], x = X(C.r1.get(v)), y = Y(C.r2.get(v));
     const r = Math.max(4, Math.min(8, cell / 3));
     const op = visible.has(v) ? 1 : 0.35;
-    g += `<g data-node="${esc(v)}" style="cursor:pointer" opacity="${op}"><title>${esc(v)}: Q1 rank ${C.r1.get(v) + 1}, Q2 rank ${C.r2.get(v) + 1}</title>`;
+    g += `<g data-node="${esc(v)}" style="cursor:pointer" opacity="${op}"><title>${esc(v)}: Q1 rank ${C.r1.get(v) + 1}, ${isEuler() ? "end rank (= Q2)" : "Q2 rank"} ${C.r2.get(v) + 1}</title>`;
     g += `<circle cx="${x}" cy="${y}" r="${r + 4}" fill="transparent"/>`;
     g += `<circle cx="${x}" cy="${y}" r="${r}" fill="${st.fill === COLORS.paper ? COLORS.ink : st.fill}" stroke="${st.stroke}" stroke-width="${st.w}"/>`;
     if (labels) g += `<text x="${x + r + 4}" y="${y + 4}" font-family="${FONT}" font-size="11" fill="${COLORS.ink}" stroke="${COLORS.paper}" stroke-width="3" paint-order="stroke">${esc(v)}</text>`;
     g += `</g>`;
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Plane: rank in Q1 against rank in Q2">${g}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Plane: rank in Q1 against ${yName}">${g}</svg>`;
 }
 
 // ---- lists ----------------------------------------------------------------------------
 // "Sorted by Q1": one column per node in Q1 order. Q1 rises by one from column to column;
 // Q2 rises from a node to the next exactly when the next is its child, and drops where a
 // new block begins (marked). The line joins the plane's points in Q1 order.
-const COL = 52, HEAD = 38;   // column pitch (48 px cell + 4 px gap); row name + gap
+const HEAD = 38;   // row name + gap
+// integer positions run to 19 digits: the grid shows five significant ones (the cell's title has all)
+const shortPos = (p) => p.length > 7 && /^\d+$/.test(p) ? `${p[0]}.${p.slice(1, 5)}e${p.length - 1}` : p;
 function listsHTML(C) {
   const { visible } = visibility(C);
   const cls = (v) => [role(C, v), visible.has(v) ? "" : "hid"].join(" ").trim();
+  if (state.lists === "own" && isEuler()) {     // the one list with its closing cells; a closing cell picks its node
+    const cells = C.s.cells.map(([name, p], i) => {
+      const open = C.s.open[name] === i, v = open ? name : name.slice(1);
+      const t = open ? `${esc(v)} at position ${esc(p)}` : `end of ${esc(v)}'s block at position ${esc(p)}`;
+      return `<span class="cell ${cls(v)}${open ? "" : " close"}" data-node="${esc(v)}" title="${t}">${open ? "" : "<b>)</b>"}${esc(v)}<small>${esc(p)}</small></span>`;
+    });
+    return `<div class="qrow"><span class="qname">Q1</span>${cells.join("")}</div>`;
+  }
   if (state.lists === "own") {
     const row = (name, list, k) => `<div class="qrow"><span class="qname">${name}</span>` +
       list.map((v) => `<span class="cell ${cls(v)}" data-node="${esc(v)}" title="${esc(v)} at position ${esc(C.s.pos[v][k])}">${esc(v)}<small>${esc(C.s.pos[v][k])}</small></span>`).join("") + `</div>`;
     return row("Q1", C.s.q1, 0) + row("Q2", C.s.q2, 1);
   }
   const q1 = C.s.q1, n = q1.length;
+  const wide = state.data.positions === "integer", COL = wide ? 76 : 52;   // column pitch: cell + 4 px gap
   const drop = (i) => i > 0 && C.r2.get(q1[i]) < C.r2.get(q1[i - 1]);
-  const title = (v) => `${esc(v)}: Q1 rank ${C.r1.get(v) + 1}, Q2 rank ${C.r2.get(v) + 1}; positions ${esc(C.s.pos[v][0])} and ${esc(C.s.pos[v][1])}`;
+  const r2 = TEXT[isEuler() ? "euler" : "dtree"].row2;
+  const title = (v) => isEuler()
+    ? `${esc(v)}: Q1 rank ${C.r1.get(v) + 1}, block end rank ${C.r2.get(v) + 1} from the right (= Q2); positions ${esc(C.s.pos[v][0])} (own cell) and ${esc(C.s.pos[v][1])} (block end)`
+    : `${esc(v)}: Q1 rank ${C.r1.get(v) + 1}, Q2 rank ${C.r2.get(v) + 1}; positions ${esc(C.s.pos[v][0])} and ${esc(C.s.pos[v][1])}`;
   const cell = (v, i, k) => {
     const top = k == null ? esc(v) : String((k === 0 ? C.r1.get(v) : C.r2.get(v)) + 1);
-    const sub = k == null ? "&nbsp;" : esc(C.s.pos[v][k]);
+    const sub = k == null ? "&nbsp;" : esc(shortPos(C.s.pos[v][k]));
     return `<span class="cell ${cls(v)}${drop(i) ? " blk" : ""}" data-node="${esc(v)}" title="${title(v)}">${top}<small>${sub}</small></span>`;
   };
   const row = (name, k) => `<div class="qrow"><span class="qname">${name}</span>` + q1.map((v, i) => cell(v, i, k)).join("") + `</div>`;
-  const H = 64, x = (i) => HEAD + i * COL + 24;
+  const H = 64, x = (i) => HEAD + i * COL + (COL - 4) / 2;
   const y = (v) => 8 + (n > 1 ? C.r2.get(v) / (n - 1) : 0) * (H - 16);
-  let svg = `<svg width="${HEAD + n * COL}" height="${H}" role="img" aria-label="Q2 rank of each node, in Q1 order">`;
+  let svg = `<svg width="${HEAD + n * COL}" height="${H}" role="img" aria-label="${r2} rank of each node, in Q1 order">`;
   for (let i = 1; i < n; i++) {
     const d = drop(i);
     svg += `<line x1="${x(i - 1)}" y1="${y(q1[i - 1])}" x2="${x(i)}" y2="${y(q1[i])}" stroke="${d ? COLORS.accent : COLORS.ink}" stroke-width="1.5"${d ? ' stroke-dasharray="4 3"' : ""}/>`;
   }
   q1.forEach((v, i) => { svg += `<g data-node="${esc(v)}" style="cursor:pointer"><circle cx="${x(i)}" cy="${y(v)}" r="4" fill="${drop(i) ? COLORS.accent : COLORS.ink}"/></g>`; });
-  svg += `<text x="0" y="12" font-size="11" fill="${COLORS.muted}" font-family="${FONT}">Q2</text>`;
+  svg += `<text x="0" y="12" font-size="11" fill="${COLORS.muted}" font-family="${FONT}">${r2}</text>`;
   svg += `<text x="0" y="${H - 4}" font-size="10" fill="${COLORS.muted}" font-family="${FONT}">rank &#8595;</text></svg>`;
-  return `<div class="qgrid">${row("", null)}${row("Q1", 0)}${row("Q2", 1)}${svg}</div>`;
+  return `<div class="qgrid${wide ? " wide" : ""}">${row("", null)}${row("Q1", 0)}${row(r2, 1)}${svg}</div>`;
 }
 
 // ---- query panel ----------------------------------------------------------------------
@@ -455,7 +504,17 @@ function queryHTML(C) {
   if (b == null) {
     let anc = 0, desc = 0;
     for (const v of C.s.q1) { if (v !== a) { if (reaches(C, v, a)) anc++; else if (reaches(C, a, v)) desc++; } }
+    if (isEuler()) {
+      const o = C.s.open[a] + 1, e = C.s.end[a] + 1;
+      const blk = o === e ? `Its block is its own cell (place ${o} of the list): a leaf.` : `Its block runs from place ${o} to place ${e} of the list; the nodes it reaches lie inside.`;
+      return `${nm(a)}: reached by ${anc} node${anc === 1 ? "" : "s"}, reaches ${desc}. ${blk} In the plane, the nodes that reach it lie upper left, the nodes it reaches lower right.`;
+    }
     return `${nm(a)}: reached by ${anc} node${anc === 1 ? "" : "s"}, reaches ${desc}. Q1 rank ${C.r1.get(a) + 1}, Q2 rank ${C.r2.get(a) + 1}. In the plane, the nodes that reach it lie upper left, the nodes it reaches lower right.`;
+  }
+  if (isEuler()) {
+    const o = C.s.open[a], e = C.s.end[a], p = C.s.open[b];
+    const yes = o < p && p < e;
+    return `Does ${nm(a)} reach ${nm(b)}? <span class="answer ${yes ? "yes" : "no"}">${yes ? "Yes" : "No"}</span> &middot; ${nm(a)}'s block: places ${o + 1} to ${e + 1} of the list &middot; ${nm(b)} at place ${p + 1} ${yes ? "(inside &#10003;)" : "(outside &#10007;)"}`;
   }
   const i1 = C.r1.get(a), j1 = C.r1.get(b), i2 = C.r2.get(a), j2 = C.r2.get(b);
   const yes = i1 < j1 && i2 < j2;
@@ -515,6 +574,13 @@ function render() {
   const d = state.data;
   const C = current();
   const total = d ? d.steps.length : 0;
+  const tk = TEXT[d && d.kind === "euler" ? "euler" : "dtree"];
+  $("#howto").innerHTML = tk.howto;
+  $("#howto-pos").textContent = TEXT[d && d.positions === "integer" ? "integer" : "rational"];
+  $("#plane-note").textContent = tk.plane;
+  $("#lists-title").textContent = tk.title;
+  $("#v-lists-label").textContent = tk.chip;
+  $("#l-own").textContent = tk.own;
   const slider = $("#step");
   slider.max = Math.max(0, total - 1);
   slider.value = state.step;
@@ -532,13 +598,17 @@ function render() {
   $("#steplabel").innerHTML = d.stepwise
     ? `Edge ${state.step + 1} of ${total}: <b>${edgeText(si.op)}</b> <span style="color:var(--muted)">(line ${si.line})</span> &middot; ${C.s.q1.length} nodes`
     : `Final tree: ${C.s.q1.length} nodes. Step by step is available up to ${d.limit} insertions.`;
-  $("#stats").textContent = `${d.final.q1.length} nodes · renumberings Q1 / Q2: ${d.renumber[0]} / ${d.renumber[1]}`;
+  $("#stats").textContent = isEuler()
+    ? `${d.final.q1.length} nodes · ${d.positions} positions · renumberings Q1: ${d.renumber[0]}`
+    : `${d.final.q1.length} nodes · ${d.positions} positions · renumberings Q1 / Q2: ${d.renumber[0]} / ${d.renumber[1]}`;
   if ($("#v-tree").checked) $("#tree").innerHTML = treeSVG(C);
   if ($("#v-plane").checked) $("#plane").innerHTML = planeSVG(C);
   if ($("#v-lists").checked) $("#lists").innerHTML = listsHTML(C);
-  $("#lists-note").textContent = state.lists === "sorted"
-    ? "nodes in Q1 order: Q1 rises by one; Q2 rises into a child and drops where a new block begins (marked)"
-    : "positions as the library stores them (fractions; a new node takes the mediant of its neighbors)";
+  const tx = TEXT[d.kind];
+  const stored = d.positions === "integer" ? "integers; a new cell takes the midpoint of its neighbors" : "fractions; a new cell takes the mediant of its neighbors";
+  $("#lists-note").textContent = state.lists === "sorted" ? tx.sorted
+    : d.kind === "euler" ? `the one list as the library stores it, with a closing cell ) for every node with children (${stored})`
+    : `positions as the library stores them (${stored})`;
   $("#p-tree").hidden = !$("#v-tree").checked;
   $("#p-plane").hidden = !$("#v-plane").checked;
   $("#p-lists").hidden = !$("#v-lists").checked;
@@ -625,6 +695,15 @@ function wire() {
     track("encode_text");
     runEncode();
   });
+  for (const id of ["kind", "positions"]) {
+    const el = $("#" + id), saved = store.get("dtree-" + id);
+    if (saved && [...el.options].some((o) => o.value === saved)) el.value = saved;
+    el.addEventListener("change", () => {
+      store.set("dtree-" + id, el.value);
+      track("encoding", options());
+      runEncode();
+    });
+  }
   $("#text").addEventListener("keydown", (ev) => { if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter") runEncode(); });
   $("#step").addEventListener("input", (ev) => { stopPlay(); goStep(+ev.target.value); });
   document.addEventListener("keydown", (ev) => {      // arrow keys step edge by edge, except while typing
@@ -713,10 +792,14 @@ function setStatus(kind, text) {
   $("#statustext").innerHTML = text;
 }
 
+// the default example, computed in advance for every encoding and kind of position
+const precomputed = () => $("#text").value === EXAMPLES[DEFAULT.example] ? DEFAULT.data[`${$("#kind").value} ${$("#positions").value}`] : null;
+
 async function runEncode() {
+  if (!backend && precomputed()) { setData(precomputed()); return; }
   if (!backend) { setStatus("", "The Python runtime is still loading; the tree is computed as soon as it is ready."); return; }
   try {
-    const data = await backend.encode($("#text").value);
+    const data = await backend.encode($("#text").value, options());
     setData(data);
   } catch (e) {
     setStatus("error", "Could not encode: " + esc(e.message || e));
@@ -741,8 +824,9 @@ async function startLocal() {
     return {
       label: `triordinal-dtree ${info.dtree} (installed) on Python ${info.python}, local`,
       local: true,
-      encode: async (text) => {
-        const res = await fetch("api/encode", { method: "POST", headers: { "Content-Type": "text/plain; charset=utf-8" }, body: text });
+      encode: async (text, opts) => {
+        const q = new URLSearchParams(opts).toString();
+        const res = await fetch("api/encode?" + q, { method: "POST", headers: { "Content-Type": "text/plain; charset=utf-8" }, body: text });
         if (!res.ok) throw new Error("local server answered " + res.status);
         return res.json();
       },
@@ -768,6 +852,7 @@ async function startPyodide() {
     py.FS.writeFile("/home/pyodide/triordinal/dlist/__init__.py", $("#src-dlist").textContent);
     py.FS.writeFile("/home/pyodide/triordinal/dtree/__init__.py", $("#src-init").textContent);
     py.FS.writeFile("/home/pyodide/triordinal/dtree/core.py", $("#src-dtree").textContent);
+    py.FS.writeFile("/home/pyodide/triordinal/dtree/euler.py", $("#src-euler").textContent);
   }
   py.FS.writeFile("/home/pyodide/explorer_bridge.py", $("#src-bridge").textContent);
   py.runPython('import sys\nif "/home/pyodide" not in sys.path: sys.path.insert(0, "/home/pyodide")');
@@ -775,7 +860,7 @@ async function startPyodide() {
   const version = py.runPython("import triordinal.dtree\ntriordinal.dtree.__version__");
   return {
     label: `triordinal-dtree ${version} (${source}) on Pyodide ${py.version}`,
-    encode: async (text) => JSON.parse(encode(text)),
+    encode: async (text, opts) => JSON.parse(encode(text, 300, opts.kind, opts.positions)),
   };
 }
 
@@ -783,7 +868,7 @@ async function boot() {
   wire();
   $("#text").value = EXAMPLES[DEFAULT.example];
   state.example = DEFAULT.example;
-  setData(DEFAULT.data);
+  setData(precomputed() || DEFAULT.data["dtree rational"]);
   try {
     backend = window.EXPLORER_BACKEND || await startLocal() || await startPyodide();
     $("#encode").disabled = false;

@@ -4,6 +4,13 @@
 
 Encode a directed tree with [DTree](https://github.com/EnisOlgac/DTree)'s two projections Q1 and Q2 and watch it happen, edge by edge. The Explorer draws the tree, places every node in the plane at its rank in Q1 and Q2, lists both projections with the positions the library stores, and answers reachability questions by clicking: *u* reaches *v* exactly when *u* comes before *v* in both lists.
 
+Two choices sit below the input:
+
+- **Encoding:** DTree, with its two lists Q1 and Q2, or EulerTree, which keeps Q1 alone with a closing cell after the subtree of every node with children (the Euler tour). In one list, *u* reaches *v* exactly when *v*'s cell lies inside *u*'s block, from *u* to its closing cell. Read from the right, the block ends come in Q2's order, so the plane is the same for both.
+- **Positions:** rational (fractions; a new cell takes the mediant of its neighbors) or integer (a new cell takes the midpoint of its neighbors' labels in [0, 2^62]).
+
+The page remembers both choices.
+
 Every tree is computed by the published library, [triordinal-dtree](https://pypi.org/project/triordinal-dtree/) from [Triordinal](https://github.com/EnisOlgac/Triordinal) (formerly dtree-encoding); the Explorer only shows what it computes.
 
 ## Three ways to use it
@@ -17,7 +24,7 @@ pip install dtree-explorer
 dtree-explorer
 ```
 
-The command starts a small server on 127.0.0.1 and opens the page in your browser; stop it with Ctrl+C. Options: `--port 8765`, `--no-browser`, `--save explorer.html` (write the page as one file).
+The command starts a small server on 127.0.0.1 and opens the page in your browser; stop it with Ctrl+C. It needs triordinal-dtree 2.2.0 or later, which brings EulerTree and integer positions. Options: `--port 8765`, `--no-browser`, `--save explorer.html` (write the page as one file).
 
 **As a single file:** download `DTree-Explorer.html` from the [latest release](https://github.com/EnisOlgac/DTree-Explorer/releases/latest) and open it in a browser. It loads Python (Pyodide) from cdn.jsdelivr.net and triordinal-dtree from pypi.org, so it needs an internet connection.
 

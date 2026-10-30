@@ -13,7 +13,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "src"))
 
+from fractions import Fraction  # noqa: E402
+
 from triordinal.dtree import DTree  # noqa: E402
+from triordinal.dtree.euler import EulerTree  # noqa: E402
 
 import build  # noqa: E402
 from dtree_explorer import __main__ as app  # noqa: E402
@@ -59,6 +62,50 @@ class TestBridge(unittest.TestCase):
         self.assertEqual(len(d["final"]["q1"]), 400)
 
 
+class TestEuler(unittest.TestCase):
+    def test_examples_agree_with_dtree_and_the_library(self):
+        for name, text in build.examples().items():
+            for positions in bridge.POSITIONS:
+                d = json.loads(bridge.encode(text))["final"]
+                e = json.loads(bridge.encode(text, kind="euler", positions=positions))
+                self.assertEqual(e["errors"], [], name)
+                self.assertEqual((e["kind"], e["positions"], len(e["renumber"])), ("euler", positions, 1))
+                f = e["final"]
+                self.assertEqual(f["q1"], d["q1"], name)
+                self.assertEqual(f["q2"], d["q2"], name)                # block ends from the right = Q2
+                t = EulerTree(positions=positions)
+                for line in text.splitlines():
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        t.add_line(line)
+                self.assertEqual(f["q1"], t.q1, name)
+                for u in f["q1"]:                                      # reach = inside the block
+                    for v in f["q1"]:
+                        inside = f["open"][u] < f["open"][v] < f["end"][u]
+                        self.assertEqual(inside, t.can_reach(u, v), (name, u, v))
+
+    def test_cells_and_positions(self):
+        for positions, num in (("rational", Fraction), ("integer", int)):
+            f = json.loads(bridge.encode("R: A; B\nA: C", kind="euler", positions=positions))["final"]
+            self.assertEqual([c[0] for c in f["cells"]], ["R", "A", "C", ")A", "B", ")R"])
+            vals = [num(c[1]) for c in f["cells"]]
+            self.assertEqual(vals, sorted(vals))                       # positions increase along the list
+            self.assertEqual(f["end"], {"R": 5, "A": 3, "C": 2, "B": 4})
+            self.assertEqual(f["pos"]["A"], [f["cells"][1][1], f["cells"][3][1]])
+            self.assertEqual(f["pos"]["C"][0], f["pos"]["C"][1])       # a leaf's block is its own cell
+        d = json.loads(bridge.encode("R: A; B\nA: C", positions="integer"))["final"]
+        self.assertTrue(all(int(p) >= 0 for v in d["pos"].values() for p in v))
+
+    def test_steps_and_bad_options(self):
+        d = json.loads(bridge.encode("A: B; C\nB: D", kind="euler"))
+        self.assertEqual([s["new"] for s in d["steps"]], ["B", "C", "D"])
+        self.assertEqual(d["steps"][0]["cells"], [["A", "0"], ["B", "1/2"], [")A", "1"]])
+        with self.assertRaises(ValueError):
+            bridge.encode("A: B", kind="q1")
+        with self.assertRaises(ValueError):
+            bridge.encode("A: B", positions="decimal")
+
+
 class TestServer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -79,6 +126,15 @@ class TestServer(unittest.TestCase):
         req = urllib.request.Request(self.url + "api/encode", data="A: B; C\nB: D".encode(), method="POST")
         d = json.loads(urllib.request.urlopen(req).read())
         self.assertEqual(d["final"]["q1"], ["A", "B", "D", "C"])
+        self.assertEqual((d["kind"], d["positions"]), ("dtree", "rational"))
+        req = urllib.request.Request(self.url + "api/encode?kind=euler&positions=integer", data="A: B; C\nB: D".encode(), method="POST")
+        d = json.loads(urllib.request.urlopen(req).read())
+        self.assertEqual((d["kind"], d["positions"]), ("euler", "integer"))
+        self.assertEqual([c[0] for c in d["final"]["cells"]], ["A", "B", "D", ")B", "C", ")A"])
+        req = urllib.request.Request(self.url + "api/encode?kind=nope", data=b"A: B", method="POST")
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            urllib.request.urlopen(req)
+        self.assertEqual(cm.exception.code, 400)
 
     def test_foreign_host_refused(self):
         req = urllib.request.Request(self.url + "api/info", headers={"Host": "evil.example"})
@@ -93,6 +149,7 @@ class TestPages(unittest.TestCase):
         for html in (plain, site):
             self.assertNotRegex(html, r"__[A-Z_]+__")
             self.assertNotIn("googletagmanager", html)                     # no Google Analytics anywhere
+            self.assertIn("class EulerTree", html)                          # the fallback copy holds euler.py
         self.assertNotIn(build.SITE["counter"], plain)                    # package copy: no visit counting
         self.assertIn(build.SITE["counter"], site)
 

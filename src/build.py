@@ -4,8 +4,8 @@ Writes two copies of the same page:
   dtree_explorer/explorer.html   for the package and the GitHub release (no visit counting)
   site/index.html                for dtree.digraphs.net (GoatCounter: visits counted, no cookies)
 
-Both embed the examples, the DTree and DList sources of the installed triordinal-dtree (fallback when
-PyPI cannot be reached), the bridge, and the default example precomputed with the bridge.
+Both embed the examples, the DTree, EulerTree and DList sources of the installed triordinal-dtree (fallback when
+PyPI cannot be reached), the bridge, and the default example precomputed with the bridge (each encoding, each kind of position).
 Run from the repository root:  python src/build.py
 """
 
@@ -80,13 +80,16 @@ def page(counter="", privacy=""):
         "__DLIST_SRC__": safe(read(dlist.__file__)),
         "__DTREE_INIT__": safe(read(os.path.join(pkg, "__init__.py"))),
         "__DTREE_SRC__": safe(read(os.path.join(pkg, "core.py"))),
+        "__DTREE_EULER__": safe(read(os.path.join(pkg, "euler.py"))),
         "__BRIDGE_SRC__": safe(read("dtree_explorer/bridge.py")),
         "__DTREE_VERSION__": dtree.__version__,
         "__EXPLORER_VERSION__": EXPLORER_VERSION,
         "__COUNTER__": counter,
         "__PRIVACY_URL__": privacy,
         "__EXAMPLES__": safe(json.dumps(ex, indent=1)),
-        "__DEFAULT__": safe(json.dumps({"example": DEFAULT, "data": json.loads(bridge.encode(ex[DEFAULT]))})),
+        "__DEFAULT__": safe(json.dumps({"example": DEFAULT, "data": {
+            f"{kind} {positions}": json.loads(bridge.encode(ex[DEFAULT], kind=kind, positions=positions))
+            for kind in bridge.KINDS for positions in bridge.POSITIONS}})),
     }
     html = read("src/template.html")
     for key, value in parts.items():

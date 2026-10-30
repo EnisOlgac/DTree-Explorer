@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0
+
+- **EulerTree:** a new choice "Encoding" shows triordinal-dtree's EulerTree (`triordinal.dtree.euler`) next to DTree. EulerTree keeps Q1 alone, with a closing cell `)x` after the subtree of every node with children; node u reaches v exactly when v's cell lies inside u's block. View 3 shows the one list as stored, closing cells included (clicking a closing cell picks its node), or the nodes in Q1 order with the rank of their block end read from the right, which is the Q2 rank; the plane is the same as with DTree. Picking two nodes answers by the block: "02's block: places 2 to 17 of the list; 15 at place 4 (inside)".
+- **Positions:** a new choice "Positions" sets rational or integer positions (`positions="integer"`, new in triordinal-dtree 2.2.0) for both encodings. Integer positions are shown in full in the stored list and with five significant digits in the sorted view; each cell's tooltip has the exact value. The stats line names the kind of position and the renumberings of each list.
+- Both choices are remembered per browser. The default example is computed in advance for all four combinations, so the page shows the chosen one while Python loads.
+- The local server takes `?kind=dtree|euler&positions=rational|integer` on `/api/encode` (400 for other values); `dtree-explorer --version` names triordinal-dtree instead of dtree-encoding.
+- Requires triordinal-dtree 2.2.0; the browser version installs 2.2.0 from PyPI, and the built-in fallback copy also holds `euler.py`.
+
 ## 1.2.1
 
 - Computed by **triordinal-dtree** 2.1.0: the browser version installs 2.1.0 from PyPI, and the built-in fallback copy holds its sources. No change to the Explorer itself; the Q1 and Q2 positions it shows now come from lists in which every node with children also has a closing cell (not shown).
