@@ -102,8 +102,8 @@ button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-
 .cell.sel2 { background: var(--ink); border-color: var(--ink); color: #fff; }
 .cell.hid { opacity: 0.4; }
 .cell.close { border-style: dashed; }
-.cell.close b { font-weight: 400; color: var(--muted); }
-.cell.sel1 b, .cell.sel2 b { color: #fff; }
+.cell b.br { color: var(--accent); }
+.cell.sel1 b.br, .cell.sel2 b.br { color: #fff; }
 .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
 .qgrid .qrow { gap: 4px; margin: 2px 0 6px; }
 .qgrid .cell { width: 48px; min-width: 0; box-sizing: border-box; padding: 3px 2px; }
@@ -235,7 +235,7 @@ footer.band a { color: var(--ink); }
 <footer class="band">
   <div class="wrap">
     <div>
-      <p><b>DTree Explorer 1.3.0</b> &middot; computed by <a href="https://pypi.org/project/triordinal-dtree/">triordinal-dtree</a> (MIT) &middot; <a href="https://github.com/EnisOlgac/DTree-Explorer">source on GitHub</a> &middot; <a href="https://doi.org/10.5772/intechopen.1013408">the paper</a></p>
+      <p><b>DTree Explorer 1.3.1</b> &middot; computed by <a href="https://pypi.org/project/triordinal-dtree/">triordinal-dtree</a> (MIT) &middot; <a href="https://github.com/EnisOlgac/DTree-Explorer">source on GitHub</a> &middot; <a href="https://doi.org/10.5772/intechopen.1013408">the paper</a></p>
       <p>Your tree never leaves your computer. Opened from a file or a website, the page loads the Python runtime from cdn.jsdelivr.net and the package from pypi.org; started with <code>dtree-explorer</code>, it uses the library installed on your machine.</p>
     </div>
     <div><p>Contact: Enis Olgac, enis@digraphs.info</p><p>Copyright &copy; 2026 by Ihsan Enis Olgac, B&ouml;blingen</p><p id="legal" hidden><a href="imprint.html">Imprint</a> &middot; <a id="privacy-link" href="#">Privacy</a></p></div>
@@ -1853,7 +1853,7 @@ def encode(text, limit=LIMIT, kind="dtree", positions="rational"):
 const CONFIG = {
   dtreeVersion: "2.2.0",
   pyodideURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/",
-  explorerVersion: "1.3.0",
+  explorerVersion: "1.3.1",
   counter: "https://dtree.goatcounter.com/count",                  // GoatCounter endpoint, only in the online copy (dtree.digraphs.net); empty elsewhere
   privacyURL: "privacy.html",           // privacy notice of the online copy; empty elsewhere
 };
@@ -1889,9 +1889,10 @@ const COLORS = {
 const FONT = 'Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif';
 
 // ---- state ----------------------------------------------------------------------------
-const state = { data: null, step: 0, sel: [], collapsed: new Set(), mode: "pick", timer: null, example: null, lists: "sorted", from: null };
+const state = { data: null, step: 0, sel: [], collapsed: new Set(), mode: "pick", timer: null, example: null, lists: { dtree: "sorted", euler: "own" }, from: null };
 let backend = null;   // { encode(text, opts) -> Promise<data>, label }; opts = { kind, positions }
 const isEuler = () => !!state.data && state.data.kind === "euler";   // what the shown data is, not what is selected
+const listMode = () => state.lists[isEuler() ? "euler" : "dtree"];   // view 3 per encoding: DTree sorted, EulerTree as stored
 const options = () => ({ kind: $("#kind").value, positions: $("#positions").value });
 
 // texts that depend on the encoding (DTree: two lists; EulerTree: one list) and the kind of position
@@ -1904,7 +1905,7 @@ const TEXT = {
     sorted: "nodes in Q1 order: Q1 rises by one; Q2 rises into a child and drops where a new block begins (marked)",
   },
   euler: {
-    howto: `<p style="margin:0 0 8px"><b>EulerTree</b> keeps one list, <b>Q1</b>: the tree top-down with siblings in their order, and after the last node of each subtree a closing cell <b>)</b> for its root. A node's block runs from its own cell to its closing cell (a leaf's block is its own cell). A node <i>u</i> reaches <i>v</i> exactly when <i>v</i>'s cell lies inside <i>u</i>'s block.</p>
+    howto: `<p style="margin:0 0 8px"><b>EulerTree</b> keeps one list, <b>Q1</b>: the tree top-down with siblings in their order, and after the last node of each subtree a closing cell for its root: <b>A[</b> opens the block of A, <b>]A</b> closes it. A node's block runs from its own cell to its closing cell (a leaf's block is its own cell). A node <i>u</i> reaches <i>v</i> exactly when <i>v</i>'s cell lies inside <i>u</i>'s block.</p>
       <p style="margin:0 0 8px">A new node needs one list insertion, two when a leaf gets its first child (its closing cell); the other positions stay as they are. Read from the right, the block ends come in DTree's Q2 order, so the plane is the same as with DTree.</p>`,
     plane: "each node at (its rank in Q1, the rank of its block end from the right = its Q2 rank)",
     title: "Q1, the Euler tour", chip: "Q1", own: "The list as stored", row2: "end",
@@ -2067,15 +2068,22 @@ const shortPos = (p) => p.length > 7 && /^\d+$/.test(p) ? `${p[0]}.${p.slice(1, 
 function listsHTML(C) {
   const { visible } = visibility(C);
   const cls = (v) => [role(C, v), visible.has(v) ? "" : "hid"].join(" ").trim();
-  if (state.lists === "own" && isEuler()) {     // the one list with its closing cells; a closing cell picks its node
+  if (listMode() === "own" && isEuler()) {     // the one list, bracketed: "A[" opens A's block, "]A" closes it; a closing cell picks its node
+    const d = state.data, prev = d.stepwise && state.step > 0 ? d.steps[state.step - 1] : null;
+    const par = C.newNode != null ? d.parents[C.newNode] : null;
+    // the parent's closing cell is new in this step when the parent was a leaf before it
+    const newClose = par != null && (!prev || prev.open[par] == null || prev.end[par] === prev.open[par]);
     const cells = C.s.cells.map(([name, p], i) => {
       const open = C.s.open[name] === i, v = open ? name : name.slice(1);
-      const t = open ? `${esc(v)} at position ${esc(p)}` : `end of ${esc(v)}'s block at position ${esc(p)}`;
-      return `<span class="cell ${cls(v)}${open ? "" : " close"}" data-node="${esc(v)}" title="${t}">${open ? "" : "<b>)</b>"}${esc(v)}<small>${esc(p)}</small></span>`;
+      const inner = C.s.end[v] !== C.s.open[v];
+      const label = open ? esc(v) + (inner ? '<b class="br">[</b>' : "") : '<b class="br">]</b>' + esc(v);
+      const t = open ? `${esc(v)} at position ${esc(p)}${inner ? `; its block ends at place ${C.s.end[v] + 1}` : ""}` : `end of ${esc(v)}'s block at position ${esc(p)}`;
+      const c = !open && v === par && newClose && !state.sel.length ? "new" : cls(v);
+      return `<span class="cell ${c}${open ? "" : " close"}" data-node="${esc(v)}" title="${t}">${label}<small>${esc(p)}</small></span>`;
     });
     return `<div class="qrow"><span class="qname">Q1</span>${cells.join("")}</div>`;
   }
-  if (state.lists === "own") {
+  if (listMode() === "own") {
     const row = (name, list, k) => `<div class="qrow"><span class="qname">${name}</span>` +
       list.map((v) => `<span class="cell ${cls(v)}" data-node="${esc(v)}" title="${esc(v)} at position ${esc(C.s.pos[v][k])}">${esc(v)}<small>${esc(C.s.pos[v][k])}</small></span>`).join("") + `</div>`;
     return row("Q1", C.s.q1, 0) + row("Q2", C.s.q2, 1);
@@ -2195,6 +2203,8 @@ function render() {
   $("#lists-title").textContent = tk.title;
   $("#v-lists-label").textContent = tk.chip;
   $("#l-own").textContent = tk.own;
+  $("#l-sorted").setAttribute("aria-pressed", String(listMode() === "sorted"));
+  $("#l-own").setAttribute("aria-pressed", String(listMode() === "own"));
   const slider = $("#step");
   slider.max = Math.max(0, total - 1);
   slider.value = state.step;
@@ -2220,8 +2230,8 @@ function render() {
   if ($("#v-lists").checked) $("#lists").innerHTML = listsHTML(C);
   const tx = TEXT[d.kind];
   const stored = d.positions === "integer" ? "integers; a new cell takes the midpoint of its neighbors" : "fractions; a new cell takes the mediant of its neighbors";
-  $("#lists-note").textContent = state.lists === "sorted" ? tx.sorted
-    : d.kind === "euler" ? `the one list as the library stores it, with a closing cell ) for every node with children (${stored})`
+  $("#lists-note").textContent = listMode() === "sorted" ? tx.sorted
+    : d.kind === "euler" ? `the one list as the library stores it: A[ opens the block of A, ]A closes it (${stored})`
     : `positions as the library stores them (${stored})`;
   $("#p-tree").hidden = !$("#v-tree").checked;
   $("#p-plane").hidden = !$("#v-plane").checked;
@@ -2356,9 +2366,7 @@ function wire() {
   $("#m-pick").addEventListener("click", () => setMode("pick"));
   $("#m-collapse").addEventListener("click", () => setMode("collapse"));
   const setLists = (m) => {
-    state.lists = m;
-    $("#l-sorted").setAttribute("aria-pressed", String(m === "sorted"));
-    $("#l-own").setAttribute("aria-pressed", String(m === "own"));
+    state.lists[isEuler() ? "euler" : "dtree"] = m;
     render();
   };
   $("#l-sorted").addEventListener("click", () => setLists("sorted"));
