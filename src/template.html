@@ -92,6 +92,8 @@ button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-
 .lists { overflow-x: auto; }
 .qrow { display: flex; align-items: stretch; gap: 4px; margin: 4px 0 10px; width: max-content; }
 .qrow .qname { font-family: var(--mono); font-weight: 600; width: 34px; flex: none; align-self: center; }
+.qgrid .qname { width: 72px; font-size: 12px; line-height: 1.25; }
+.qgrid .qname small { display: block; font-weight: 400; font-size: 10px; color: var(--muted); }
 .cell { font-family: var(--mono); font-size: 12px; text-align: center; border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; background: var(--paper); cursor: pointer; min-width: 38px; }
 .cell small { display: block; color: var(--muted); font-size: 10px; }
 .cell.new { background: var(--accent-soft); border-color: var(--accent); }
@@ -301,7 +303,7 @@ const TEXT = {
     title: "Q1, the Euler tour", chip: "Q1", own: "The list as stored", row2: "end",
     sorted: "nodes in Q1 order with the rank of their block end read from the right (= Q2): it rises into a child and drops where a new block begins (marked)",
   },
-  rational: "Positions are fractions: a new cell takes the mediant of its neighbors, and a list is renumbered only when a denominator would grow too large.",
+  rational: "Positions are fractions: a new cell takes the mediant of its neighbors, and a list is renumbered only when a new position can no longer be stored.",
   integer: "Positions are integers in [0, 2^62]: a new cell takes the midpoint of its neighbors, and a list is renumbered when two neighbors leave no room.",
 };
 
@@ -452,7 +454,7 @@ function planeSVG(C) {
 // "Sorted by Q1": one column per node in Q1 order. Q1 rises by one from column to column;
 // Q2 rises from a node to the next exactly when the next is its child, and drops where a
 // new block begins (marked). The line joins the plane's points in Q1 order.
-const HEAD = 38;   // row name + gap
+const HEAD = 76;   // row name (72 px in the sorted grid) + gap
 // integer positions run to 19 digits: the grid shows five significant ones (the cell's title has all)
 const shortPos = (p) => p.length > 7 && /^\d+$/.test(p) ? `${p[0]}.${p.slice(1, 5)}e${p.length - 1}` : p;
 function listsHTML(C) {
@@ -501,7 +503,8 @@ function listsHTML(C) {
   q1.forEach((v, i) => { svg += `<g data-node="${esc(v)}" style="cursor:pointer"><circle cx="${x(i)}" cy="${y(v)}" r="4" fill="${drop(i) ? COLORS.accent : COLORS.ink}"/></g>`; });
   svg += `<text x="0" y="12" font-size="11" fill="${COLORS.muted}" font-family="${FONT}">${r2}</text>`;
   svg += `<text x="0" y="${H - 4}" font-size="10" fill="${COLORS.muted}" font-family="${FONT}">rank &#8595;</text></svg>`;
-  return `<div class="qgrid${wide ? " wide" : ""}">${row("", null)}${row("Q1", 0)}${row(r2, 1)}${svg}</div>`;
+  // the large number is the rank, which shifts with every insertion; the small one the stored position, which does not
+  return `<div class="qgrid${wide ? " wide" : ""}">${row("", null)}${row("Q1 rank<small>position</small>", 0)}${row(`${r2} rank<small>position</small>`, 1)}${svg}</div>`;
 }
 
 // ---- query panel ----------------------------------------------------------------------
@@ -620,7 +623,7 @@ function render() {
   if ($("#v-lists").checked) $("#lists").innerHTML = listsHTML(C);
   const tx = TEXT[d.kind];
   const stored = d.positions === "integer" ? "integers; a new cell takes the midpoint of its neighbors" : "fractions; a new cell takes the mediant of its neighbors";
-  $("#lists-note").textContent = listMode() === "sorted" ? tx.sorted
+  $("#lists-note").textContent = listMode() === "sorted" ? `${tx.sorted}. Ranks are for reading only: reachability compares the stored positions below them, which an insertion leaves unchanged`
     : d.kind === "euler" ? `the one list as the library stores it: A[ opens the block of A, ]A closes it (${stored})`
     : `positions as the library stores them (${stored})`;
   $("#p-tree").hidden = !$("#v-tree").checked;

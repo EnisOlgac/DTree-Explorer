@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Enis Olgac", email = "enis@digraphs.info" }]
-dependencies = ["triordinal-dtree>=2.2.0"]
+dependencies = ["triordinal-dtree>=2.3.0"]
 keywords = ["directed tree", "tree topology", "reachability", "visualization", "incremental encoding", "teaching"]
 classifiers = [
   "Development Status :: 4 - Beta",

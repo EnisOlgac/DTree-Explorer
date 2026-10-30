@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.3
+
+- Computed by **triordinal-dtree** 2.3.0: the browser version installs 2.3.0 from PyPI, and the built-in fallback copy holds its sources. Rational positions are now renumbered only when a new position can no longer be stored, so the stored fractions shown in view 3 can have larger denominators than before.
+- **Ranks and positions labeled** in the view sorted by Q1, proposed by Claude after a question by Enis Olgac: the rows read "Q1 rank" and "Q2 rank" (EulerTree: "end rank"), each with "position" below, and the note says that ranks are for reading only, while reachability compares the stored positions, which an insertion leaves unchanged.
+
 ## 1.3.2
 
 - **Encoding** is now its own card with a header, directly below the tree description: *Lists* (DTree or EulerTree) and *Positions* (rational or integer). Suggested by Enis Olgac; in 1.3.1 the two choices sat unlabeled below the edges and were easy to miss.

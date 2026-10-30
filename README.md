@@ -24,7 +24,7 @@ pip install dtree-explorer
 dtree-explorer
 ```
 
-The command starts a small server on 127.0.0.1 and opens the page in your browser; stop it with Ctrl+C. It needs triordinal-dtree 2.2.0 or later, which brings EulerTree and integer positions. Options: `--port 8765`, `--no-browser`, `--save explorer.html` (write the page as one file).
+The command starts a small server on 127.0.0.1 and opens the page in your browser; stop it with Ctrl+C. It needs triordinal-dtree 2.3.0 or later. Options: `--port 8765`, `--no-browser`, `--save explorer.html` (write the page as one file).
 
 **As a single file:** download `DTree-Explorer.html` from the [latest release](https://github.com/EnisOlgac/DTree-Explorer/releases/latest) and open it in a browser. It loads Python (Pyodide) from cdn.jsdelivr.net and triordinal-dtree from pypi.org, so it needs an internet connection.
 
