@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.2
+
+- **Encoding** is now its own card with a header, directly below the tree description: *Lists* (DTree or EulerTree) and *Positions* (rational or integer). Suggested by Enis Olgac; in 1.3.1 the two choices sat unlabeled below the edges and were easy to miss.
+- "How to read it" points to both choices, and for EulerTree it also says how to watch Q1 grow and how to read the bracketed list.
+
 ## 1.3.1
 
 - **EulerTree: Q1 as it develops**, suggested by Enis Olgac. View 3 opens on the one list for EulerTree (DTree keeps "Sorted by Q1"; each encoding remembers its own choice while the page is open). Blocks are bracketed: `A[` opens the block of A, `]A` closes it, so the list reads as a nested term. The new node is marked in every step, and so is its parent's closing cell when the parent was a leaf before; the cells glide to their new places as you step.

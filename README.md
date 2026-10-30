@@ -4,9 +4,9 @@
 
 Encode a directed tree with [DTree](https://github.com/EnisOlgac/DTree)'s two projections Q1 and Q2 and watch it happen, edge by edge. The Explorer draws the tree, places every node in the plane at its rank in Q1 and Q2, lists both projections with the positions the library stores, and answers reachability questions by clicking: *u* reaches *v* exactly when *u* comes before *v* in both lists.
 
-Two choices sit below the input:
+The card *Encoding*, below the tree description, offers two choices:
 
-- **Encoding:** DTree, with its two lists Q1 and Q2, or EulerTree, which keeps Q1 alone with a closing cell after the subtree of every node with children (the Euler tour). In one list, *u* reaches *v* exactly when *v*'s cell lies inside *u*'s block, from *u* to its closing cell. Read from the right, the block ends come in Q2's order, so the plane is the same for both.
+- **Lists:** DTree, with its two lists Q1 and Q2, or EulerTree, which keeps Q1 alone with a closing cell after the subtree of every node with children (the Euler tour). In one list, *u* reaches *v* exactly when *v*'s cell lies inside *u*'s block, from *u* to its closing cell. Read from the right, the block ends come in Q2's order, so the plane is the same for both. With EulerTree, view 3 shows Q1 as it grows, bracketed: `A[` opens the block of A, `]A` closes it.
 - **Positions:** rational (fractions; a new cell takes the mediant of its neighbors) or integer (a new cell takes the midpoint of its neighbors' labels in [0, 2^62]).
 
 The page remembers both choices.

@@ -141,18 +141,21 @@ footer.band a { color: var(--ink); }
       <input id="file" type="file" accept=".csx,.txt,text/plain">
       <label class="field" for="text">Edges, one line each</label>
       <textarea id="text" spellcheck="false"></textarea>
-      <div class="opts">
-        <div><label class="field" for="kind">Encoding</label>
-          <select id="kind"><option value="dtree">DTree (Q1, Q2)</option><option value="euler">EulerTree (Q1)</option></select></div>
-        <div><label class="field" for="positions">Positions</label>
-          <select id="positions"><option value="rational">rational</option><option value="integer">integer</option></select></div>
-      </div>
       <div class="row" style="margin-top:10px">
         <button id="encode" class="primary" type="button" disabled>Encode</button>
         <span class="stats" id="stats"></span>
       </div>
       <p class="syntax"><code>p: c1; c2</code> last children of p &middot; <code>s &gt; c</code> c directly after sibling s &middot; <code>s &lt; c</code> c directly before s &middot; lines starting with <code>#</code> are comments</p>
       <ul class="errors" id="errors" hidden></ul>
+    </div>
+    <div class="card">
+      <h2>Encoding</h2>
+      <div class="opts">
+        <div><label class="field" for="kind" style="margin-top:0">Lists</label>
+          <select id="kind"><option value="dtree">DTree (Q1, Q2)</option><option value="euler">EulerTree (Q1)</option></select></div>
+        <div><label class="field" for="positions" style="margin-top:0">Positions</label>
+          <select id="positions"><option value="rational">rational</option><option value="integer">integer</option></select></div>
+      </div>
     </div>
     <div class="card">
       <div class="status" id="status"><span class="dot"></span><span id="statustext">Starting&hellip;</span></div>
@@ -235,7 +238,7 @@ footer.band a { color: var(--ink); }
 <footer class="band">
   <div class="wrap">
     <div>
-      <p><b>DTree Explorer 1.3.1</b> &middot; computed by <a href="https://pypi.org/project/triordinal-dtree/">triordinal-dtree</a> (MIT) &middot; <a href="https://github.com/EnisOlgac/DTree-Explorer">source on GitHub</a> &middot; <a href="https://doi.org/10.5772/intechopen.1013408">the paper</a></p>
+      <p><b>DTree Explorer 1.3.2</b> &middot; computed by <a href="https://pypi.org/project/triordinal-dtree/">triordinal-dtree</a> (MIT) &middot; <a href="https://github.com/EnisOlgac/DTree-Explorer">source on GitHub</a> &middot; <a href="https://doi.org/10.5772/intechopen.1013408">the paper</a></p>
       <p>Your tree never leaves your computer. Opened from a file or a website, the page loads the Python runtime from cdn.jsdelivr.net and the package from pypi.org; started with <code>dtree-explorer</code>, it uses the library installed on your machine.</p>
     </div>
     <div><p>Contact: Enis Olgac, enis@digraphs.info</p><p>Copyright &copy; 2026 by Ihsan Enis Olgac, B&ouml;blingen</p><p id="legal" hidden><a href="imprint.html">Imprint</a> &middot; <a id="privacy-link" href="#">Privacy</a></p></div>
@@ -1853,7 +1856,7 @@ def encode(text, limit=LIMIT, kind="dtree", positions="rational"):
 const CONFIG = {
   dtreeVersion: "2.2.0",
   pyodideURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/",
-  explorerVersion: "1.3.1",
+  explorerVersion: "1.3.2",
   counter: "",                  // GoatCounter endpoint, only in the online copy (dtree.digraphs.net); empty elsewhere
   privacyURL: "",           // privacy notice of the online copy; empty elsewhere
 };
@@ -1899,14 +1902,15 @@ const options = () => ({ kind: $("#kind").value, positions: $("#positions").valu
 const TEXT = {
   dtree: {
     howto: `<p style="margin:0 0 8px">Every node gets a position in two lists. <b>Q1</b> lists the tree top-down with siblings in their order, <b>Q2</b> with siblings reversed. A node <i>u</i> reaches <i>v</i> exactly when <i>u</i> comes before <i>v</i> in both lists.</p>
-      <p style="margin:0 0 8px">A new node needs two list insertions; the other positions stay as they are. Step through the build with the slider and watch it happen, edge by edge.</p>`,
+      <p style="margin:0 0 8px">A new node needs two list insertions; the other positions stay as they are. Step through the build with the slider and watch it happen, edge by edge. Under <i>Encoding</i>, <i>Lists</i> switches between DTree's two lists and EulerTree's one list, <i>Positions</i> between rational and integer positions.</p>`,
     plane: "each node at (its rank in Q1, its rank in Q2)",
     title: "Q1 and Q2", chip: "Q1 / Q2", own: "Each in its own order", row2: "Q2",
     sorted: "nodes in Q1 order: Q1 rises by one; Q2 rises into a child and drops where a new block begins (marked)",
   },
   euler: {
     howto: `<p style="margin:0 0 8px"><b>EulerTree</b> keeps one list, <b>Q1</b>: the tree top-down with siblings in their order, and after the last node of each subtree a closing cell for its root: <b>A[</b> opens the block of A, <b>]A</b> closes it. A node's block runs from its own cell to its closing cell (a leaf's block is its own cell). A node <i>u</i> reaches <i>v</i> exactly when <i>v</i>'s cell lies inside <i>u</i>'s block.</p>
-      <p style="margin:0 0 8px">A new node needs one list insertion, two when a leaf gets its first child (its closing cell); the other positions stay as they are. Read from the right, the block ends come in DTree's Q2 order, so the plane is the same as with DTree.</p>`,
+      <p style="margin:0 0 8px">A new node needs one list insertion, two when a leaf gets its first child (its closing cell); the other positions stay as they are. Read from the right, the block ends come in DTree's Q2 order, so the plane is the same as with DTree.</p>
+      <p style="margin:0 0 8px">Step through the build with the slider and watch Q1 grow, edge by edge; read with its brackets, the list is the tree as a nested term. Under <i>Encoding</i>, <i>Lists</i> switches between DTree's two lists and EulerTree's one list, <i>Positions</i> between rational and integer positions.</p>`,
     plane: "each node at (its rank in Q1, the rank of its block end from the right = its Q2 rank)",
     title: "Q1, the Euler tour", chip: "Q1", own: "The list as stored", row2: "end",
     sorted: "nodes in Q1 order with the rank of their block end read from the right (= Q2): it rises into a child and drops where a new block begins (marked)",
