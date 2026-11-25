@@ -1,5 +1,7 @@
 # DTree Explorer
 
+> **Moved.** Since November 2026 the DTree Explorer is part of [Triordinal](https://github.com/EnisOlgac/Triordinal/tree/main/python/explorer), next to DList and DTree, and is published on PyPI as [`triordinal-dtree-explorer`](https://pypi.org/project/triordinal-dtree-explorer/) from there. This repository is archived. Version 1.4.0 here was prepared but not released; it went out as Triordinal 3.1.0. `dtree-explorer` on PyPI stays at 1.3.3, which works with triordinal-dtree 2.x.
+
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23701538.svg)](https://doi.org/10.5281/zenodo.23701538)
 
 Encode a directed tree with [DTree](https://github.com/EnisOlgac/Triordinal) and watch it happen, edge by edge. The Explorer draws the tree, places every node in the plane at its rank in Q1 and Q2, lists the projections with the positions the library stores, and answers reachability questions by clicking.
