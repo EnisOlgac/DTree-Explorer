@@ -154,7 +154,7 @@ footer.band a { color: var(--ink); }
       <h2>Encoding</h2>
       <div class="opts">
         <div><label class="field" for="kind" style="margin-top:0">Lists</label>
-          <select id="kind"><option value="dtree">DTree (Q1, Q2)</option><option value="euler">EulerTree (Q1)</option></select></div>
+          <select id="kind"><option value="dtree">DTree 3.0 (Q1, structure in the nodes)</option><option value="dtree2">DTree 2.x (Q1, Q2)</option><option value="euler">EulerTree (Q1, closing cells)</option></select></div>
         <div><label class="field" for="positions" style="margin-top:0">Positions</label>
           <select id="positions"><option value="rational">rational</option><option value="integer">integer</option></select></div>
       </div>
@@ -252,6 +252,7 @@ footer.band a { color: var(--ink); }
 <script type="text/plain" id="src-init">__DTREE_INIT__</script>
 <script type="text/plain" id="src-dtree">__DTREE_SRC__</script>
 <script type="text/plain" id="src-euler">__DTREE_EULER__</script>
+<script type="text/plain" id="src-two-lists">__DTREE_TWO_LISTS__</script>
 <script type="text/plain" id="src-bridge">__BRIDGE_SRC__</script>
 <script>
 "use strict";
@@ -280,25 +281,36 @@ const COLORS = {
 const FONT = 'Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif';
 
 // ---- state ----------------------------------------------------------------------------
-const state = { data: null, step: 0, sel: [], collapsed: new Set(), mode: "pick", timer: null, example: null, lists: { dtree: "sorted", euler: "own" }, from: null };
+const state = { data: null, step: 0, sel: [], collapsed: new Set(), mode: "pick", timer: null, example: null, lists: { dtree: "own", dtree2: "sorted", euler: "own" }, from: null };
 let backend = null;   // { encode(text, opts) -> Promise<data>, label }; opts = { kind, positions }
-const isEuler = () => !!state.data && state.data.kind === "euler";   // what the shown data is, not what is selected
-const listMode = () => state.lists[isEuler() ? "euler" : "dtree"];   // view 3 per encoding: DTree sorted, EulerTree as stored
+const kindOf = () => state.data ? state.data.kind : "dtree";       // what the shown data is, not what is selected
+const isEuler = () => kindOf() === "euler";
+const isOne = () => kindOf() === "dtree";                             // DTree 3.0: one list, the structure in the nodes
+const listMode = () => state.lists[kindOf()];   // view 3 per encoding: DTree 2.x sorted, DTree 3.0 and EulerTree as stored
 const options = () => ({ kind: $("#kind").value, positions: $("#positions").value });
 
-// texts that depend on the encoding (DTree: two lists; EulerTree: one list) and the kind of position
+// texts that depend on the encoding (DTree 3.0: one list and the structure in the nodes; DTree 2.x: two lists;
+// EulerTree: one list with closing cells) and the kind of position
 const TEXT = {
   dtree: {
-    howto: `<p style="margin:0 0 8px">Every node gets a position in two lists. <b>Q1</b> lists the tree top-down with siblings in their order, <b>Q2</b> with siblings reversed. A node <i>u</i> reaches <i>v</i> exactly when <i>u</i> comes before <i>v</i> in both lists.</p>
-      <p style="margin:0 0 8px">A new node needs two list insertions; the other positions stay as they are. Step through the build with the slider and watch it happen, edge by edge. Under <i>Encoding</i>, <i>Lists</i> switches between DTree's two lists and EulerTree's one list, <i>Positions</i> between rational and integer positions.</p>`,
+    howto: `<p style="margin:0 0 8px"><b>DTree 3.0</b> keeps one list, <b>Q1</b>: the tree top-down with siblings in their order. The structure is kept in the nodes: each node knows its parent and its children. A node's block in Q1 runs from its own cell to just before its <b>delimiter</b>: its next sibling, or, for a last child, its parent's delimiter. A node <i>u</i> reaches <i>v</i> exactly when <i>v</i> lies inside <i>u</i>'s block. Nothing marks the end of a block; the siblings say where it is.</p>
+      <p style="margin:0 0 8px">A new node needs one list insertion, directly after its parent, before its next sibling, or before its parent's delimiter; the other positions stay as they are. View 3 shows Q1 as stored, with each node's delimiter below it. The plane uses Q2 read from the children right to left; it is not stored.</p>
+      <p style="margin:0 0 8px">Step through the build with the slider and watch it happen, edge by edge. Under <i>Encoding</i>, <i>Lists</i> switches between DTree 3.0, DTree 2.x with its two lists and EulerTree, <i>Positions</i> between rational and integer positions.</p>`,
+    plane: "each node at (its rank in Q1, its rank in Q2 read from the children right to left: not stored)",
+    title: "Q1 and the delimiters", chip: "Q1", own: "The list as stored", row2: "Q2 (read)",
+    sorted: "nodes in Q1 order with their Q2 rank read from the children right to left (not stored): it rises into a child and drops where a new block begins (marked)",
+  },
+  dtree2: {
+    howto: `<p style="margin:0 0 8px"><b>DTree 2.x</b> gives every node a position in two lists. <b>Q1</b> lists the tree top-down with siblings in their order, <b>Q2</b> with siblings reversed. A node <i>u</i> reaches <i>v</i> exactly when <i>u</i> comes before <i>v</i> in both lists.</p>
+      <p style="margin:0 0 8px">A new node needs two list insertions; the other positions stay as they are. Step through the build with the slider and watch it happen, edge by edge. Under <i>Encoding</i>, <i>Lists</i> switches between DTree 3.0, DTree 2.x with its two lists and EulerTree, <i>Positions</i> between rational and integer positions.</p>`,
     plane: "each node at (its rank in Q1, its rank in Q2)",
     title: "Q1 and Q2", chip: "Q1 / Q2", own: "Each in its own order", row2: "Q2",
     sorted: "nodes in Q1 order: Q1 rises by one; Q2 rises into a child and drops where a new block begins (marked)",
   },
   euler: {
     howto: `<p style="margin:0 0 8px"><b>EulerTree</b> keeps one list, <b>Q1</b>: the tree top-down with siblings in their order, and after the last node of each subtree a closing cell for its root: <b>A[</b> opens the block of A, <b>]A</b> closes it. A node's block runs from its own cell to its closing cell (a leaf's block is its own cell). A node <i>u</i> reaches <i>v</i> exactly when <i>v</i>'s cell lies inside <i>u</i>'s block.</p>
-      <p style="margin:0 0 8px">A new node needs one list insertion, two when a leaf gets its first child (its closing cell); the other positions stay as they are. Read from the right, the block ends come in DTree's Q2 order, so the plane is the same as with DTree.</p>
-      <p style="margin:0 0 8px">Step through the build with the slider and watch Q1 grow, edge by edge; read with its brackets, the list is the tree as a nested term. Under <i>Encoding</i>, <i>Lists</i> switches between DTree's two lists and EulerTree's one list, <i>Positions</i> between rational and integer positions.</p>`,
+      <p style="margin:0 0 8px">A new node needs one list insertion, two when a leaf gets its first child (its closing cell); the other positions stay as they are. Read from the right, the block ends come in DTree 2.x's Q2 order, so the plane is the same as with DTree.</p>
+      <p style="margin:0 0 8px">Step through the build with the slider and watch Q1 grow, edge by edge; read with its brackets, the list is the tree as a nested term. Under <i>Encoding</i>, <i>Lists</i> switches between DTree 3.0, DTree 2.x with its two lists and EulerTree, <i>Positions</i> between rational and integer positions.</p>`,
     plane: "each node at (its rank in Q1, the rank of its block end from the right = its Q2 rank)",
     title: "Q1, the Euler tour", chip: "Q1", own: "The list as stored", row2: "end",
     sorted: "nodes in Q1 order with the rank of their block end read from the right (= Q2): it rises into a child and drops where a new block begins (marked)",
@@ -421,7 +433,7 @@ function planeSVG(C) {
     g += `<text x="${L - 8}" y="${Y(i) + 3.5}" text-anchor="end" font-family="${FONT}" font-size="10" fill="${COLORS.muted}">${i + 1}</text>`;
   }
   g += `<text x="${L + (n * cell) / 2}" y="18" text-anchor="middle" font-family="${FONT}" font-size="12" fill="${COLORS.ink}">rank in Q1 &#8594;</text>`;
-  const yName = isEuler() ? "rank of the block end, from the right (= Q2)" : "rank in Q2";
+  const yName = isEuler() ? "rank of the block end, from the right (= Q2)" : isOne() ? "rank in Q2, read from the children (not stored)" : "rank in Q2";
   g += `<text transform="translate(16 ${T + (n * cell) / 2}) rotate(90)" text-anchor="middle" font-family="${FONT}" font-size="12" fill="${COLORS.ink}">${yName} &#8594;</text>`;   // turned clockwise: reads downward, the arrow points down
   const a = state.sel[0];
   if (a != null && C.r1.has(a)) {
@@ -441,7 +453,7 @@ function planeSVG(C) {
     const st = STYLE[role(C, v)], x = X(C.r1.get(v)), y = Y(C.r2.get(v));
     const r = Math.max(4, Math.min(8, cell / 3));
     const op = visible.has(v) ? 1 : 0.35;
-    g += `<g data-node="${esc(v)}" style="cursor:pointer" opacity="${op}"><title>${esc(v)}: Q1 rank ${C.r1.get(v) + 1}, ${isEuler() ? "end rank (= Q2)" : "Q2 rank"} ${C.r2.get(v) + 1}</title>`;
+    g += `<g data-node="${esc(v)}" style="cursor:pointer" opacity="${op}"><title>${esc(v)}: Q1 rank ${C.r1.get(v) + 1}, ${isEuler() ? "end rank (= Q2)" : isOne() ? "Q2 rank (read)" : "Q2 rank"} ${C.r2.get(v) + 1}</title>`;
     g += `<circle cx="${x}" cy="${y}" r="${r + 4}" fill="transparent"/>`;
     g += `<circle cx="${x}" cy="${y}" r="${r}" fill="${st.fill === COLORS.paper ? COLORS.ink : st.fill}" stroke="${st.stroke}" stroke-width="${st.w}"/>`;
     if (labels) g += `<text x="${x + r + 4}" y="${y + 4}" font-family="${FONT}" font-size="11" fill="${COLORS.ink}" stroke="${COLORS.paper}" stroke-width="3" paint-order="stroke">${esc(v)}</text>`;
@@ -475,6 +487,13 @@ function listsHTML(C) {
     });
     return `<div class="qrow"><span class="qname">Q1</span>${cells.join("")}</div>`;
   }
+  if (listMode() === "own" && isOne()) {       // the one list as stored, each node's delimiter below it
+    const dl = (v) => C.s.delim[v] === "]" ? "]" : C.s.delim[v];
+    const run = (v) => C.s.run && C.s.run[v] !== v ? `; in the vertical run topped by ${esc(C.s.run[v])}` : "";
+    const top = C.s.cells.map(([v, p]) => `<span class="cell ${cls(v)}" data-node="${esc(v)}" title="${esc(v)} at position ${esc(p)}; its block ends before ${esc(dl(v))}${run(v)}">${esc(v)}<small>${esc(shortPos(p))}</small></span>`);
+    const bottom = C.s.cells.map(([v]) => `<span class="cell ${cls(v)} close" data-node="${esc(v)}" title="${esc(v)}'s block ends before ${esc(dl(v))} (${C.s.delim[v] === "]" ? "the end of the list" : d3why(C, v)})">&#8594;${esc(dl(v))}<small>&nbsp;</small></span>`);
+    return `<div class="qrow"><span class="qname">Q1</span>${top.join("")}</div><div class="qrow"><span class="qname" title="the cell before which the block ends">ends</span>${bottom.join("")}</div>`;
+  }
   if (listMode() === "own") {
     const row = (name, list, k) => `<div class="qrow"><span class="qname">${name}</span>` +
       list.map((v) => `<span class="cell ${cls(v)}" data-node="${esc(v)}" title="${esc(v)} at position ${esc(C.s.pos[v][k])}">${esc(v)}<small>${esc(C.s.pos[v][k])}</small></span>`).join("") + `</div>`;
@@ -483,13 +502,15 @@ function listsHTML(C) {
   const q1 = C.s.q1, n = q1.length;
   const wide = state.data.positions === "integer", COL = wide ? 76 : 52;   // column pitch: cell + 4 px gap
   const drop = (i) => i > 0 && C.r2.get(q1[i]) < C.r2.get(q1[i - 1]);
-  const r2 = TEXT[isEuler() ? "euler" : "dtree"].row2;
-  const title = (v) => isEuler()
+  const r2 = TEXT[kindOf()].row2;
+  const title = (v) => isOne()
+    ? `${esc(v)}: Q1 rank ${C.r1.get(v) + 1}, Q2 rank ${C.r2.get(v) + 1} read from the children (not stored); position ${esc(C.s.pos[v][0])}; its block ends before ${esc(C.s.delim[v])}`
+    : isEuler()
     ? `${esc(v)}: Q1 rank ${C.r1.get(v) + 1}, block end rank ${C.r2.get(v) + 1} from the right (= Q2); positions ${esc(C.s.pos[v][0])} (own cell) and ${esc(C.s.pos[v][1])} (block end)`
     : `${esc(v)}: Q1 rank ${C.r1.get(v) + 1}, Q2 rank ${C.r2.get(v) + 1}; positions ${esc(C.s.pos[v][0])} and ${esc(C.s.pos[v][1])}`;
   const cell = (v, i, k) => {
     const top = k == null ? esc(v) : String((k === 0 ? C.r1.get(v) : C.r2.get(v)) + 1);
-    const sub = k == null ? "&nbsp;" : esc(shortPos(C.s.pos[v][k]));
+    const sub = k == null ? "&nbsp;" : isOne() && k === 1 ? "&#8594;" + esc(C.s.delim[v]) : esc(shortPos(C.s.pos[v][k]));
     return `<span class="cell ${cls(v)}${drop(i) ? " blk" : ""}" data-node="${esc(v)}" title="${title(v)}">${top}<small>${sub}</small></span>`;
   };
   const row = (name, k) => `<div class="qrow"><span class="qname">${name}</span>` + q1.map((v, i) => cell(v, i, k)).join("") + `</div>`;
@@ -504,7 +525,28 @@ function listsHTML(C) {
   svg += `<text x="0" y="12" font-size="11" fill="${COLORS.muted}" font-family="${FONT}">${r2}</text>`;
   svg += `<text x="0" y="${H - 4}" font-size="10" fill="${COLORS.muted}" font-family="${FONT}">rank &#8595;</text></svg>`;
   // the large number is the rank, which shifts with every insertion; the small one the stored position, which does not
-  return `<div class="qgrid${wide ? " wide" : ""}">${row("", null)}${row("Q1 rank<small>position</small>", 0)}${row(`${r2} rank<small>position</small>`, 1)}${svg}</div>`;
+  const sub2 = isOne() ? "ends before" : "position";
+  return `<div class="qgrid${wide ? " wide" : ""}">${row("", null)}${row("Q1 rank<small>position</small>", 0)}${row(`${r2} rank<small>${sub2}</small>`, 1)}${svg}</div>`;
+}
+
+// ---- DTree 3.0: where a block ends, and which step of the query decides -----------------
+function d3why(C, v) {
+  const p = state.data.parents[v], kids = p != null ? C.kids.get(p) || [] : [];
+  if (p == null) return "the root: its block is the whole list";
+  return kids[kids.length - 1] !== v ? "its next sibling" : `it is ${esc(p)}'s last child: ${esc(p)}'s delimiter`;
+}
+function d3step(C, a, b) {
+  const o = C.s.open[a], p = C.s.open[b], kids = C.kids.get(a) || [];
+  if (!(o < p)) return [false, `1: ${esc(b)} is not after ${esc(a)} in Q1`];
+  if (!kids.length) return [false, `2: ${esc(a)} has no children`];
+  const par = state.data.parents[a], sibs = par != null ? C.kids.get(par) || [] : [];
+  const inside = p <= C.s.end[a];
+  if (par == null) return [true, `3: ${esc(a)} is the root, its block is the whole list`];
+  if (sibs[sibs.length - 1] !== a) return [inside, `3: ${esc(a)}'s next sibling ${esc(C.s.delim[a])} ends its block`];
+  const last = kids[kids.length - 1];
+  if (p <= C.s.open[last]) return [true, `4: ${esc(b)} lies up to ${esc(a)}'s last child ${esc(last)}`];
+  if (!(C.kids.get(last) || []).length) return [inside, `4: ${esc(a)}'s last child ${esc(last)} is a leaf; the cell after it, ${esc(C.s.delim[a])}, ends ${esc(a)}'s block`];
+  return [inside, `5: the delimiter is looked for, up through the last children: ${esc(C.s.delim[a])}`];
 }
 
 // ---- query panel ----------------------------------------------------------------------
@@ -519,12 +561,21 @@ function queryHTML(C) {
   if (b == null) {
     let anc = 0, desc = 0;
     for (const v of C.s.q1) { if (v !== a) { if (reaches(C, v, a)) anc++; else if (reaches(C, a, v)) desc++; } }
+    if (isOne()) {
+      const o = C.s.open[a] + 1, e = C.s.end[a] + 1;
+      const blk = o === e ? `Its block is its own cell (place ${o} of Q1).` : `Its block runs from place ${o} to place ${e} of Q1 and ends before ${esc(C.s.delim[a])} (${d3why(C, a)}).`;
+      return `${nm(a)}: reached by ${anc} node${anc === 1 ? "" : "s"}, reaches ${desc}. ${blk} In the plane, the nodes that reach it lie upper left, the nodes it reaches lower right.`;
+    }
     if (isEuler()) {
       const o = C.s.open[a] + 1, e = C.s.end[a] + 1;
       const blk = o === e ? `Its block is its own cell (place ${o} of the list): a leaf.` : `Its block runs from place ${o} to place ${e} of the list; the nodes it reaches lie inside.`;
       return `${nm(a)}: reached by ${anc} node${anc === 1 ? "" : "s"}, reaches ${desc}. ${blk} In the plane, the nodes that reach it lie upper left, the nodes it reaches lower right.`;
     }
     return `${nm(a)}: reached by ${anc} node${anc === 1 ? "" : "s"}, reaches ${desc}. Q1 rank ${C.r1.get(a) + 1}, Q2 rank ${C.r2.get(a) + 1}. In the plane, the nodes that reach it lie upper left, the nodes it reaches lower right.`;
+  }
+  if (isOne()) {
+    const [yes, why] = d3step(C, a, b);
+    return `Does ${nm(a)} reach ${nm(b)}? <span class="answer ${yes ? "yes" : "no"}">${yes ? "Yes" : "No"}</span> &middot; decided by step ${why}`;
   }
   if (isEuler()) {
     const o = C.s.open[a], e = C.s.end[a], p = C.s.open[b];
@@ -589,7 +640,7 @@ function render() {
   const d = state.data;
   const C = current();
   const total = d ? d.steps.length : 0;
-  const tk = TEXT[d && d.kind === "euler" ? "euler" : "dtree"];
+  const tk = TEXT[d ? d.kind : "dtree"];
   $("#howto").innerHTML = tk.howto;
   $("#howto-pos").textContent = TEXT[d && d.positions === "integer" ? "integer" : "rational"];
   $("#plane-note").textContent = tk.plane;
@@ -615,7 +666,7 @@ function render() {
   $("#steplabel").innerHTML = d.stepwise
     ? `Edge ${state.step + 1} of ${total}: <b>${edgeText(si.op)}</b> <span style="color:var(--muted)">(line ${si.line})</span> &middot; ${C.s.q1.length} nodes`
     : `Final tree: ${C.s.q1.length} nodes. Step by step is available up to ${d.limit} insertions.`;
-  $("#stats").textContent = isEuler()
+  $("#stats").textContent = isEuler() || isOne()
     ? `${d.final.q1.length} nodes · ${d.positions} positions · renumberings Q1: ${d.renumber[0]}`
     : `${d.final.q1.length} nodes · ${d.positions} positions · renumberings Q1 / Q2: ${d.renumber[0]} / ${d.renumber[1]}`;
   if ($("#v-tree").checked) $("#tree").innerHTML = treeSVG(C);
@@ -625,6 +676,7 @@ function render() {
   const stored = d.positions === "integer" ? "integers; a new cell takes the midpoint of its neighbors" : "fractions; a new cell takes the mediant of its neighbors";
   $("#lists-note").textContent = listMode() === "sorted" ? `${tx.sorted}. Ranks are for reading only: reachability compares the stored positions below them, which an insertion leaves unchanged`
     : d.kind === "euler" ? `the one list as the library stores it: A[ opens the block of A, ]A closes it (${stored})`
+    : d.kind === "dtree" ? `Q1 as the library stores it (${stored}); below each node the cell before which its block ends: its next sibling, or its parent's delimiter (] is the end of the list)`
     : `positions as the library stores them (${stored})`;
   $("#p-tree").hidden = !$("#v-tree").checked;
   $("#p-plane").hidden = !$("#v-plane").checked;
@@ -759,7 +811,7 @@ function wire() {
   $("#m-pick").addEventListener("click", () => setMode("pick"));
   $("#m-collapse").addEventListener("click", () => setMode("collapse"));
   const setLists = (m) => {
-    state.lists[isEuler() ? "euler" : "dtree"] = m;
+    state.lists[kindOf()] = m;
     render();
   };
   $("#l-sorted").addEventListener("click", () => setLists("sorted"));
@@ -868,6 +920,7 @@ async function startPyodide() {
     py.FS.writeFile("/home/pyodide/triordinal/dtree/__init__.py", $("#src-init").textContent);
     py.FS.writeFile("/home/pyodide/triordinal/dtree/core.py", $("#src-dtree").textContent);
     py.FS.writeFile("/home/pyodide/triordinal/dtree/euler.py", $("#src-euler").textContent);
+    py.FS.writeFile("/home/pyodide/triordinal/dtree/two_lists.py", $("#src-two-lists").textContent);
   }
   py.FS.writeFile("/home/pyodide/explorer_bridge.py", $("#src-bridge").textContent);
   py.runPython('import sys\nif "/home/pyodide" not in sys.path: sys.path.insert(0, "/home/pyodide")');

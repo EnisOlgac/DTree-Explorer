@@ -17,6 +17,7 @@ from fractions import Fraction  # noqa: E402
 
 from triordinal.dtree import DTree  # noqa: E402
 from triordinal.dtree.euler import EulerTree  # noqa: E402
+from triordinal.dtree.two_lists import DTree as DTree2  # noqa: E402
 
 import build  # noqa: E402
 from dtree_explorer import __main__ as app  # noqa: E402
@@ -27,14 +28,18 @@ class TestBridge(unittest.TestCase):
     def test_examples_match_the_library(self):
         for name, text in build.examples().items():
             d = json.loads(bridge.encode(text))
+            d2 = json.loads(bridge.encode(text, kind="dtree2"))
             self.assertEqual(d["errors"], [], name)
-            t = DTree()
+            t, t2 = DTree(), DTree2()
             for line in text.splitlines():
                 line = line.strip()
                 if line and not line.startswith("#"):
                     t.add_line(line)
+                    t2.add_line(line)
             self.assertEqual(d["final"]["q1"], t.q1, name)
-            self.assertEqual(d["final"]["q2"], t.q2, name)
+            self.assertEqual(d["final"]["q2"], t2.q2, name)            # Q2 read from the children = 2.x's Q2
+            self.assertEqual(d2["final"]["q1"], t2.q1, name)
+            self.assertEqual(d2["final"]["q2"], t2.q2, name)
             self.assertEqual(d["steps"][-1]["q1"], t.q1, name)
 
     def test_paper_examples(self):
@@ -93,7 +98,7 @@ class TestEuler(unittest.TestCase):
             self.assertEqual(f["end"], {"R": 5, "A": 3, "C": 2, "B": 4})
             self.assertEqual(f["pos"]["A"], [f["cells"][1][1], f["cells"][3][1]])
             self.assertEqual(f["pos"]["C"][0], f["pos"]["C"][1])       # a leaf's block is its own cell
-        d = json.loads(bridge.encode("R: A; B\nA: C", positions="integer"))["final"]
+        d = json.loads(bridge.encode("R: A; B\nA: C", kind="dtree2", positions="integer"))["final"]
         self.assertTrue(all(int(p) >= 0 for v in d["pos"].values() for p in v))
 
     def test_steps_and_bad_options(self):
@@ -104,6 +109,34 @@ class TestEuler(unittest.TestCase):
             bridge.encode("A: B", kind="q1")
         with self.assertRaises(ValueError):
             bridge.encode("A: B", positions="decimal")
+
+
+class TestDTree3(unittest.TestCase):
+    def test_blocks_end_before_the_delimiter(self):
+        for name, text in build.examples().items():
+            for positions in bridge.POSITIONS:
+                d = json.loads(bridge.encode(text, positions=positions))
+                self.assertEqual((d["kind"], len(d["renumber"])), ("dtree", 1))
+                f = d["final"]
+                t = DTree(positions=positions)
+                for line in text.splitlines():
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        t.add_line(line)
+                self.assertEqual([c[0] for c in f["cells"]], t.q1, name)       # Q1 as stored, no closing cells
+                for u in f["q1"]:
+                    d_ = f["delim"][u]
+                    self.assertEqual(f["end"][u] + 1, f["open"][d_] if d_ != "]" else len(f["cells"]), (name, u))
+                    for v in f["q1"]:
+                        inside = f["open"][u] < f["open"][v] <= f["end"][u]
+                        self.assertEqual(inside, t.can_reach(u, v), (name, u, v))
+
+    def test_delimiters(self):
+        f = json.loads(bridge.encode("R: A; B\nA: C"))["final"]
+        self.assertEqual(f["cells"][0][0], "R")
+        self.assertEqual(f["delim"], {"R": "]", "A": "B", "C": "B", "B": "]"})   # C is A's last child: A's delimiter
+        self.assertEqual(f["pos"]["R"][1], "]")
+        self.assertEqual(f["run"], {"R": "R", "A": "A", "C": "A", "B": "B"})     # C is A's only child: A's run
 
 
 class TestServer(unittest.TestCase):
@@ -150,6 +183,7 @@ class TestPages(unittest.TestCase):
             self.assertNotRegex(html, r"__[A-Z_]+__")
             self.assertNotIn("googletagmanager", html)                     # no Google Analytics anywhere
             self.assertIn("class EulerTree", html)                          # the fallback copy holds euler.py
+            self.assertIn("DTree 2.x: a single-rooted", html)              # ... and two_lists.py
         self.assertNotIn(build.SITE["counter"], plain)                    # package copy: no visit counting
         self.assertIn(build.SITE["counter"], site)
 

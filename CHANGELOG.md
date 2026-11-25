@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.0
+
+- Computed by **triordinal-dtree** 3.0.0: the browser version installs 3.0.0 from PyPI, and the built-in fallback copy holds its sources, `two_lists.py` included. Requires Python 3.10 or later.
+- **DTree 3.0** is the new default encoding ("DTree 3.0 (Q1, structure in the nodes)"): one list Q1, the structure kept in the nodes. View 3 shows Q1 as stored and, below each node, the cell before which its block ends (its delimiter: the next sibling, or the parent's delimiter for a last child; `]` is the end of the list); the tooltip names the vertical run a node belongs to. Picking two nodes names the step of the query cascade that decides (1 not after, 2 no children, 3 next sibling, 4 last child, 5 the delimiter looked for). The plane uses Q2 read from the children right to left, which DTree 3.0 does not store.
+- **DTree 2.x** (two lists Q1 and Q2, `triordinal.dtree.two_lists`) and **EulerTree** stay as choices, unchanged.
+- The local server takes `kind=dtree|dtree2|euler`.
+- **New name on PyPI:** `triordinal-dtree-explorer`, continuing `dtree-explorer` (whose last version stays 1.3.3), in line with Triordinal and clear of the unrelated `dtreeviz`. The import name `dtree_explorer` and the command `dtree-explorer` stay.
+
 ## 1.3.3
 
 - Computed by **triordinal-dtree** 2.3.0: the browser version installs 2.3.0 from PyPI, and the built-in fallback copy holds its sources. Rational positions are now renumbered only when a new position can no longer be stored, so the stored fractions shown in view 3 can have larger denominators than before.

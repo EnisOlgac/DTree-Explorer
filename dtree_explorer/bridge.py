@@ -5,8 +5,10 @@ package; the same code runs under CPython for the tests and to precompute the ex
 that is shown while the Python runtime loads. Everything the page displays about the
 encoding (the order of the lists, the positions, the parents) comes from here.
 
-Two encodings: "dtree" (DTree, two lists Q1 and Q2) and "euler" (EulerTree, one list: Q1
-with its closing cells, the Euler tour). Two kinds of position: "rational" and "integer".
+Three encodings: "dtree" (DTree 3.0: one list Q1, the structure in the vertices; the end of a
+block is its delimiter, the right sibling or the parent's delimiter), "dtree2" (DTree 2.x, two
+lists Q1 and Q2) and "euler" (EulerTree, one list: Q1 with its closing cells, the Euler tour).
+Two kinds of position: "rational" and "integer".
 """
 
 import json
@@ -15,9 +17,10 @@ from fractions import Fraction
 import triordinal.dtree as dtree
 from triordinal.dtree import DTree
 from triordinal.dtree.euler import EulerTree
+from triordinal.dtree.two_lists import DTree as DTree2
 
 LIMIT = 300  # insertions recorded step by step; larger trees show the final state only
-KINDS = {"dtree": DTree, "euler": EulerTree}
+KINDS = {"dtree": DTree, "dtree2": DTree2, "euler": EulerTree}
 POSITIONS = ("rational", "integer")
 
 
@@ -33,9 +36,38 @@ def _position(t, cell):
     return str(cell.num) if t.positions == "integer" else str(Fraction(cell.num, cell.den))
 
 
+def _rl_preorder(t):
+    """DTree 3.0 stores no Q2: read it from the kids lists, right to left (for the plane)."""
+    out, stack = [], [t.get_node(t.root)]
+    while stack:
+        n = stack.pop()
+        out.append(n.name)
+        stack.extend(n.children)                          # pushed LR, popped RL
+    return out
+
+
 def _state(t, kind):
     q1 = t.q1
     if kind == "dtree":
+        # DTree 3.0: the one list Q1 as stored (no closing cells); each node's block runs from its
+        # own cell to the cell before its delimiter: its right sibling, or its parent's delimiter
+        cells, opens = [], {}
+        c = t.get_node(t.root).c
+        while c.name != "]":
+            cells.append([c.name, _position(t, c)])
+            opens[c.name] = len(cells) - 1
+            c = c.next
+        delim, end = {}, {}
+        for v in q1:
+            d = t._delimiter(t.get_node(v))
+            delim[v] = d.name                             # a vertex, or "]" (SINK)
+            end[v] = (opens[d.name] if d.name in opens else len(cells)) - 1
+        dpos = {v: (_position(t, t.get_node(delim[v]).c) if delim[v] in opens else "]") for v in q1}
+        pos = {v: [cells[opens[v]][1], dpos[v]] for v in q1}
+        run = {v: (n.run.top.name if n.run is not None else v) for v in q1 for n in [t.get_node(v)]}
+        return {"q1": q1, "q2": _rl_preorder(t), "pos": pos, "cells": cells, "open": opens,
+                "end": end, "delim": delim, "run": run}
+    if kind == "dtree2":
         pos = {v: [str(t.Q1.index(v)), str(t.Q2.index(v))] for v in q1}
         return {"q1": q1, "q2": t.q2, "pos": pos}
     # EulerTree: the whole list, with the closing cells; each node's block runs from its own cell
@@ -62,7 +94,8 @@ def encode(text, limit=LIMIT, kind="dtree", positions="rational"):
 
     Each step is one inserted node: the operation, its line, the new node and its parent,
     and (up to ``limit`` insertions) the full state after it: the lists and the positions.
-    ``kind`` is "dtree" (two lists) or "euler" (one list), ``positions`` "rational" or "integer".
+    ``kind`` is "dtree" (DTree 3.0), "dtree2" (DTree 2.x, two lists) or "euler" (EulerTree),
+    ``positions`` "rational" or "integer".
     """
     if kind not in KINDS:
         raise ValueError(f"kind must be one of {sorted(KINDS)}, not {kind!r}")
@@ -105,12 +138,13 @@ def encode(text, limit=LIMIT, kind="dtree", positions="rational"):
             elif recording:
                 recording = False
                 for s in steps:
-                    for k in ("q1", "q2", "pos", "cells", "open", "end"):
+                    for k in ("q1", "q2", "pos", "cells", "open", "end", "delim", "run"):
                         s.pop(k, None)
             steps.append(step)
-    empty = {"q1": [], "q2": [], "pos": {}, "cells": [], "open": {}, "end": {}}
+    empty = {"q1": [], "q2": [], "pos": {}, "cells": [], "open": {}, "end": {}, "delim": {}, "run": {}}
     final = _state(t, kind) if t.root is not None else empty
-    lists = [t.Q1] if kind == "euler" else [t.Q1, t.Q2]
+    renumber = ([t.renumber_count] if kind == "dtree" else
+                [t.Q1.renumber_count] if kind == "euler" else [t.Q1.renumber_count, t.Q2.renumber_count])
     return json.dumps({
         "version": dtree.__version__,
         "kind": kind,
@@ -121,6 +155,6 @@ def encode(text, limit=LIMIT, kind="dtree", positions="rational"):
         "final": final,
         "stepwise": recording,
         "limit": limit,
-        "renumber": [q.renumber_count for q in lists],
+        "renumber": renumber,
         "errors": errors,
     })

@@ -65,7 +65,7 @@ class Handler(BaseHTTPRequestHandler):
         kind = q.get("kind", ["dtree"])[0]
         positions = q.get("positions", ["rational"])[0]
         if kind not in bridge.KINDS or positions not in bridge.POSITIONS:
-            return self._send(400, "text/plain", b"kind must be dtree or euler, positions rational or integer")
+            return self._send(400, "text/plain", b"kind must be dtree, dtree2 or euler, positions rational or integer")
         n = int(self.headers.get("Content-Length") or 0)
         if n > MAX_INPUT:
             return self._send(413, "text/plain", b"description too large")

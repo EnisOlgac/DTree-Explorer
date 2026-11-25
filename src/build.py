@@ -4,7 +4,7 @@ Writes two copies of the same page:
   dtree_explorer/explorer.html   for the package and the GitHub release (no visit counting)
   site/index.html                for dtree.digraphs.net (GoatCounter: visits counted, no cookies)
 
-Both embed the examples, the DTree, EulerTree and DList sources of the installed triordinal-dtree (fallback when
+Both embed the examples, the DTree (3.0 and 2.x), EulerTree and DList sources of the installed triordinal-dtree (fallback when
 PyPI cannot be reached), the bridge, and the default example precomputed with the bridge (each encoding, each kind of position).
 Run from the repository root:  python src/build.py
 """
@@ -81,6 +81,7 @@ def page(counter="", privacy=""):
         "__DTREE_INIT__": safe(read(os.path.join(pkg, "__init__.py"))),
         "__DTREE_SRC__": safe(read(os.path.join(pkg, "core.py"))),
         "__DTREE_EULER__": safe(read(os.path.join(pkg, "euler.py"))),
+        "__DTREE_TWO_LISTS__": safe(read(os.path.join(pkg, "two_lists.py"))),
         "__BRIDGE_SRC__": safe(read("dtree_explorer/bridge.py")),
         "__DTREE_VERSION__": dtree.__version__,
         "__EXPLORER_VERSION__": EXPLORER_VERSION,
